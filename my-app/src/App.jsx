@@ -121,6 +121,9 @@ function Content() {
     );
   }
 
+  // Ensure `numbers` is an array
+  const numbersArray = Array.isArray(numbers) ? numbers : [];
+
   return (
     <div className="flex flex-col gap-8 max-w-lg mx-auto">
       <p>Welcome {viewer ?? "Anonymous"}!</p>
@@ -140,9 +143,9 @@ function Content() {
       </p>
       <p>
         Numbers:{" "}
-        {numbers?.length === 0
+        {numbersArray.length === 0
           ? "Click the button!"
-          : numbers?.join(", ") ?? "..."}
+          : numbersArray.join(", ")}
       </p>
       <p>
         Edit{" "}
