@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Authenticated,
   Unauthenticated,
@@ -8,23 +9,57 @@ import {
 } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { SignInButton, SignUpButton, UserButton } from "@clerk/clerk-react";
+import { SpeechToTextDemo } from "./components/SpeechToTextDemo";
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<"demo" | "numbers">("demo");
+
   return (
     <>
       <header className="sticky top-0 z-10 bg-light dark:bg-dark p-4 border-b-2 border-slate-200 dark:border-slate-800 flex flex-row justify-between items-center">
-        Convex + React + Clerk
+        <span className="font-bold">🎫 Badge - Speech to Text</span>
         <UserButton />
       </header>
-      <main className="p-8 flex flex-col gap-16">
+      <main className="p-8 flex flex-col gap-8">
         <h1 className="text-4xl font-bold text-center">
-          Convex + React + Clerk
+          Badge - Event Networking Copilot
         </h1>
-        <Authenticated>
-          <Content />
-        </Authenticated>
+        
+        {/* Tab Navigation - Always visible for testing */}
+        <div className="flex justify-center gap-4 mb-4">
+          <button
+            onClick={() => setActiveTab("demo")}
+            className={`px-4 py-2 rounded-lg font-semibold transition ${
+              activeTab === "demo"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            🎤 Speech to Text
+          </button>
+          <button
+            onClick={() => setActiveTab("numbers")}
+            className={`px-4 py-2 rounded-lg font-semibold transition ${
+              activeTab === "numbers"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            🔢 Numbers Demo
+          </button>
+        </div>
+
+        {/* Tab Content - Always visible for testing */}
+        {activeTab === "demo" ? <SpeechToTextDemo /> : (
+          <Authenticated>
+            <Content />
+          </Authenticated>
+        )}
+        
         <Unauthenticated>
-          <SignInForm />
+          <div className="text-center text-gray-500">
+            <p>Sign in above for full features</p>
+          </div>
         </Unauthenticated>
       </main>
     </>
