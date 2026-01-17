@@ -87,6 +87,67 @@ const FLOOR_MAP_BOOTHS = [
   },
 ]
 
+// Legacy mock data for reference
+const MOCK_BOOTHS = [
+  {
+    id: '1',
+    name: 'Google Booth',
+    companyName: 'Google',
+    description: 'Search & Advertising platform',
+    latitude: 40.7128,
+    longitude: -74.006,
+    tags: ['AI/ML', 'Cloud', 'Web Dev'],
+    keyPeople: [
+      {
+        id: 'p1',
+        name: 'Sarah Chen',
+        role: 'Engineering Manager',
+        company: 'Google',
+        bio: 'Leading ML infrastructure team',
+        expertise: ['ML', 'System Design', 'Leadership'],
+      },
+    ],
+  },
+  {
+    id: '2',
+    name: 'Microsoft Booth',
+    companyName: 'Microsoft',
+    description: 'Cloud & Enterprise Solutions',
+    latitude: 40.715,
+    longitude: -74.008,
+    tags: ['Cloud', 'Enterprise', 'Security'],
+    keyPeople: [
+      {
+        id: 'p2',
+        name: 'James Wilson',
+        role: 'Senior Developer',
+        company: 'Microsoft',
+        bio: 'Azure cloud architect',
+        expertise: ['Cloud Architecture', 'DevOps', 'Security'],
+      },
+    ],
+  },
+  {
+    id: '3',
+    name: 'Meta Booth',
+    companyName: 'Meta',
+    description: 'Social & VR Innovation',
+    latitude: 40.71,
+    longitude: -74.004,
+    tags: ['Web Dev', 'VR/AR', 'Mobile Dev'],
+    keyPeople: [
+      {
+        id: 'p3',
+        name: 'Emma Rodriguez',
+        role: 'Product Manager',
+        company: 'Meta',
+        bio: 'Building next-gen social experiences',
+        expertise: ['Product', 'UX', 'Community'],
+      },
+    ],
+  },
+]
+
 export default function Map() {
   const { booths, selectedBooth, setBooths, setSelectedBooth } = useAppStore()
   const [searchQuery, setSearchQuery] = useState('')
@@ -95,40 +156,11 @@ export default function Map() {
   const [userLocation, setUserLocation] = useState(null)
   const [locationLoading, setLocationLoading] = useState(true)
   const [locationError, setLocationError] = useState(null)
-  const [mapDimensions, setMapDimensions] = useState({ width: 0, height: 0 })
-  const [userMapPosition, setUserMapPosition] = useState({ x: 0, y: 0 })
 
-  // Initialize booths from floor map data
-  useEffect(() => {
-    setBooths(FLOOR_MAP_BOOTHS)
-  }, [setBooths])
-
-  // Get map dimensions on image load and set initial user position to center
-  useEffect(() => {
-    const floorImage = document.querySelector('.floor-image')
-    
-    if (floorImage) {
-      const updateMapDimensions = () => {
-        const width = floorImage.naturalWidth
-        const height = floorImage.naturalHeight
-        setMapDimensions({ width, height })
-        // Initialize user at center of map
-        setUserMapPosition({ x: width / 2, y: height / 2 })
-      }
-      
-      if (floorImage.complete) {
-        updateMapDimensions()
-      } else {
-        floorImage.onload = updateMapDimensions
-      }
-    }
-  }, [])
-
-  // Live tracking of user movement through geolocation
-  // Simulates movement within lecture hall-sized space (approximately 50m x 30m)
+  // Initialize geolocation tracking
   useEffect(() => {
     if ('geolocation' in navigator) {
-      // Request user's initial location
+      // Request user's current location
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude, accuracy } = position.coords
@@ -137,15 +169,13 @@ export default function Map() {
             longitude,
             accuracy,
             timestamp: new Date().toISOString(),
-            floor: 'Career Fair Floor',
+            floor: 'MyHall Floor 3', // Assuming this floor location
           }
           setUserLocation(locationData)
           setLocationLoading(false)
+          console.log(`User location: ${latitude}, ${longitude} (accuracy: ${accuracy}m)`)
           
-          // Convert GPS to map position (simulated for lecture hall)
-          updateUserMapPosition(latitude, longitude)
-          
-          // Log to Amplitude
+          // Track location with Amplitude
           if (window.amplitude) {
             window.amplitude.getInstance().logEvent('map_page_loaded', {
               ...locationData,
@@ -158,6 +188,7 @@ export default function Map() {
           setLocationLoading(false)
           console.warn('Geolocation error:', error)
           
+          // Log error to Amplitude
           if (window.amplitude) {
             window.amplitude.getInstance().logEvent('geolocation_error', {
               error_code: error.code,
@@ -173,7 +204,7 @@ export default function Map() {
         }
       )
 
-      // Watch user location for live tracking - updates every 3 seconds
+      // Watch user location for continuous tracking
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude, accuracy } = position.coords
@@ -182,32 +213,33 @@ export default function Map() {
             longitude,
             accuracy,
             timestamp: new Date().toISOString(),
-            floor: 'Career Fair Floor',
+            floor: 'MyHall Floor 3',
           }
           setUserLocation(locationData)
+          console.log(`Location updated: ${latitude}, ${longitude}`)
           
-          // Update user position on map based on GPS movement
-          updateUserMapPosition(latitude, longitude)
-          
-          // Log to Amplitude
+          // Log continuous location updates to Amplitude
           if (window.amplitude) {
             window.amplitude.getInstance().logEvent('user_location_updated', {
-              latitude,
-              longitude,
-              accuracy,
-              map_position: { x: userMapPosition.x, y: userMapPosition.y },
-              timestamp: new Date().toISOString(),
-              event_type: 'geolocation_live_tracking',
+              ...locationData,
+              event_type: 'geolocation_continuous_tracking',
             })
           }
         },
         (error) => {
           console.warn('Watch position error:', error)
+          if (window.amplitude) {
+            window.amplitude.getInstance().logEvent('geolocation_watch_error', {
+              error_code: error.code,
+              error_message: error.message,
+              timestamp: new Date().toISOString(),
+            })
+          }
         },
         {
           enableHighAccuracy: false,
           timeout: 5000,
-          maximumAge: 3000, // Update every 3 seconds max
+          maximumAge: 10000,
         }
       )
 
@@ -216,30 +248,14 @@ export default function Map() {
       setLocationError('Geolocation is not supported by your browser')
       setLocationLoading(false)
     }
-  }, [userMapPosition])
+  }, [])
 
-  // Convert GPS coordinates to map pixel position
-  // Simulates a lecture hall: ~50m x 30m (typical lecture hall dimensions)
-  const updateUserMapPosition = (latitude, longitude) => {
-    if (mapDimensions.width === 0 || mapDimensions.height === 0) return
+  // Initialize booths from floor map data
+  useEffect(() => {
+    // TODO: Fetch booths from Convex backend
+    setBooths(FLOOR_MAP_BOOTHS)
+  }, [setBooths])
 
-    // Simulate GPS-to-map conversion (assuming GPS coordinates vary within hall bounds)
-    // For demo: use small variation to simulate movement within lecture hall
-    const latVariation = latitude % 0.001 // Small decimal fraction
-    const lonVariation = longitude % 0.001
-    
-    // Map GPS variation to pixel coordinates within the map
-    // Lecture hall ~50m x 30m, assuming map proportions similar
-    const mapX = (latVariation / 0.001) * (mapDimensions.width * 0.8) + mapDimensions.width * 0.1
-    const mapY = (lonVariation / 0.001) * (mapDimensions.height * 0.8) + mapDimensions.height * 0.1
-    
-    setUserMapPosition({
-      x: Math.max(0, Math.min(mapX, mapDimensions.width)),
-      y: Math.max(0, Math.min(mapY, mapDimensions.height)),
-    })
-  }
-
-  // Filter booths based on search and tag
   useEffect(() => {
     let filtered = booths
 
@@ -263,20 +279,34 @@ export default function Map() {
   const handleBoothClick = (booth) => {
     setSelectedBooth(booth)
     
-    // Track booth visit with Amplitude
+    // Track booth visit with Amplitude and store in app state
     if (window.amplitude) {
       window.amplitude.getInstance().logEvent('booth_clicked', {
         booth_id: booth.id,
         booth_name: booth.name,
         company_name: booth.companyName,
         user_location: userLocation,
-        user_map_position: userMapPosition,
         timestamp: new Date().toISOString(),
       })
     }
+    
+    // Store booth visit in app state for backend sync
+    const boothVisit = {
+      boothId: booth.id,
+      boothName: booth.name,
+      companyName: booth.companyName,
+      visitedAt: new Date().toISOString(),
+      userLocation,
+    }
+    
+    // Add to store (will be synced to Convex backend)
+    // TODO: This will be persisted to Convex
+    console.log('Booth visit recorded:', boothVisit)
   }
 
   const handleGeneratePersonalizedSummary = (booth) => {
+    // TODO: Call AI service to generate personalized booth summary
+    // based on user's resume, interests, and target roles
     console.log('Generate summary for booth:', booth.id)
   }
 
@@ -299,17 +329,15 @@ export default function Map() {
                 className="floor-image"
               />
               
-              {/* User location indicator - live tracking */}
-              <div 
-                className="user-location-indicator"
-                style={{
-                  left: `${userMapPosition.x}px`,
-                  top: `${userMapPosition.y}px`,
-                }}
-                title={`You are here (accuracy: ${userLocation ? Math.round(userLocation.accuracy) : '?'}m)`}
-              >
-                <div className="location-pulse"></div>
-              </div>
+              {/* User location indicator */}
+              {userLocation && !locationError && (
+                <div 
+                  className="user-location-indicator"
+                  title={`You are here (accuracy: ${Math.round(userLocation.accuracy)}m)`}
+                >
+                  <div className="location-pulse"></div>
+                </div>
+              )}
 
               {/* Booth markers */}
               {filteredBooths.map((booth, index) => (
@@ -465,7 +493,7 @@ export default function Map() {
 
           {/* Geolocation & Analytics Info */}
           <div className="analytics-section">
-            <h3>📍 Live Location Tracking</h3>
+            <h3>📍 Geolocation Status</h3>
             {locationLoading ? (
               <p className="analytics-info">
                 <Loader size={16} className="spinner" /> Detecting location...
@@ -477,20 +505,15 @@ export default function Map() {
             ) : userLocation ? (
               <div className="location-info">
                 <p className="analytics-info success">
-                  ✓ Live tracking active
+                  ✓ Location detected
                 </p>
                 <p className="location-details">
                   Lat: {userLocation.latitude.toFixed(4)}° <br />
                   Lon: {userLocation.longitude.toFixed(4)}° <br />
                   Accuracy: {Math.round(userLocation.accuracy)}m
                 </p>
-                <p className="location-details" style={{ fontSize: '12px', color: '#888' }}>
-                  Map Position: <br />
-                  X: {Math.round(userMapPosition.x)}px <br />
-                  Y: {Math.round(userMapPosition.y)}px
-                </p>
                 <p className="location-note">
-                  Live tracking enabled. Moving within lecture hall-sized venue.
+                  Assuming this floor location for booth proximity tracking
                 </p>
               </div>
             ) : null}

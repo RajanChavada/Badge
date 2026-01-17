@@ -1,5 +1,3 @@
-/* Full Map Layout with Sidebar */
-
 .map-page {
   padding: 2rem;
   max-width: 1600px;
@@ -68,7 +66,7 @@
   border-radius: 0.5rem;
 }
 
-/* Booth marker styling - purple numbered circles */
+/* Booth marker styling */
 .booth-marker-dot {
   position: absolute;
   width: 40px;
@@ -130,14 +128,15 @@
   opacity: 1;
 }
 
-/* User location indicator - live tracking with red dot */
+/* User location indicator */
 .user-location-indicator {
   position: absolute;
   width: 50px;
   height: 50px;
+  top: 20px;
+  right: 20px;
   z-index: 10;
   pointer-events: none;
-  transform: translate(-50%, -50%);
 }
 
 .location-pulse {
