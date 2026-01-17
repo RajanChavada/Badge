@@ -66,80 +66,26 @@
   border-radius: 0.5rem;
 }
 
-/* Booth marker styling */
-.booth-marker-dot {
+/* Real-time user location indicator */
+.user-location-dot {
   position: absolute;
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-  transition: all 0.3s ease;
-  border: 3px solid white;
+  width: 32px;
+  height: 32px;
   transform: translate(-50%, -50%);
-  z-index: 5;
-}
-
-.booth-marker-dot:hover {
-  width: 48px;
-  height: 48px;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
-  transform: translate(-50%, -50%) scale(1.1);
-}
-
-.booth-marker-dot.selected {
-  width: 48px;
-  height: 48px;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.3);
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-}
-
-.marker-number {
-  color: white;
-  font-weight: bold;
-  font-size: 1rem;
-  text-align: center;
-  line-height: 1;
-}
-
-.marker-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.35rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-  margin-bottom: 0.5rem;
-}
-
-.booth-marker-dot:hover .marker-tooltip {
-  opacity: 1;
-}
-
-/* User location indicator */
-.user-location-indicator {
-  position: absolute;
-  width: 50px;
-  height: 50px;
-  top: 20px;
-  right: 20px;
-  z-index: 10;
+  z-index: 15;
   pointer-events: none;
 }
 
 .location-pulse {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 107, 107, 0.6) 0%, rgba(255, 107, 107, 0.2) 100%);
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+.location-inner {
   position: absolute;
   width: 12px;
   height: 12px;
@@ -148,27 +94,8 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.2);
-  animation: pulse 2s infinite;
-}
-
-.location-pulse::after {
-  content: '';
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  background: inherit;
-  border-radius: 50%;
-  animation: pulse-ring 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(255, 107, 107, 0.1);
-  }
+  box-shadow: 0 0 0 3px white, 0 0 0 5px #ff6b6b;
+  z-index: 1;
 }
 
 @keyframes pulse-ring {
@@ -177,9 +104,78 @@
     opacity: 1;
   }
   100% {
-    transform: scale(2);
+    transform: scale(2.5);
     opacity: 0;
   }
+}
+
+/* Sponsor booth markers */
+.booth-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.booth-pin {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 3px solid white;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.booth-marker:hover .booth-pin {
+  width: 52px;
+  height: 52px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.booth-marker.selected .booth-pin {
+  width: 52px;
+  height: 52px;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.15);
+}
+
+.booth-label {
+  background: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+.booth-marker:hover .booth-label {
+  opacity: 1;
+}
+
+.booth-label strong {
+  display: block;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.booth-distance {
+  color: #666;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 /* Talking points section in details popup */
@@ -203,6 +199,18 @@
   font-size: 0.85rem;
   line-height: 1.5;
   margin: 0;
+}
+
+/* Distance info in booth details */
+.distance-info {
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.05) 0%, rgba(255, 107, 107, 0.1) 100%);
+  border-left: 3px solid #ff6b6b;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: #ff6b6b;
+  font-weight: 600;
 }
 
 .booth-details-popup {
@@ -462,6 +470,22 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.5rem;
+  gap: 0.5rem;
+}
+
+.booth-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.booth-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .booth-header h4 {
@@ -469,10 +493,20 @@
   font-size: 0.95rem;
   margin: 0;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.booth-header svg {
-  color: #667eea;
+.booth-distance-badge {
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 107, 107, 0.15) 100%);
+  color: #ff6b6b;
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .booth-company {

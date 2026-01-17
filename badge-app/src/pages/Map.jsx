@@ -1,19 +1,32 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore.js'
 import { MapPin, Search, Filter, Loader } from 'lucide-react'
 import './Map.css'
 
-// Floor map booths with pixel coordinates relative to the floor image
-const FLOOR_MAP_BOOTHS = [
+// Room simulation constants - 75m x 75m total space
+const ROOM_WIDTH_METERS = 75
+const ROOM_HEIGHT_METERS = 75
+const ROOM_BOUNDS = {
+  minX: 0.125,    // 9.375% - left edge of room
+  maxX: 0.875,    // 87.5% - right edge of room
+  minY: 0.125,    // 9.375% - top edge of room
+  maxY: 0.875,    // 87.5% - bottom edge of room
+}
+
+// Sponsor booths distributed within the room (as percentages of map width/height)
+// Spaced evenly apart: Google (top-left), Shopify (top-right), 
+// Amplitude (bottom-left), Foresters (bottom-right) with good spacing
+const SPONSOR_BOOTHS = [
   {
     id: '1',
-    name: 'Google Sponsor Booth',
+    name: 'Google',
     companyName: 'Google',
-    description: '<to be filled later>',
-    x: 150,
-    y: 200,
+    description: 'Search & Cloud Solutions',
+    x: 0.2,    // 20% from left
+    y: 0.2,    // 20% from top
+    color: '#4285F4',
     tags: ['AI/ML', 'Cloud', 'Web Dev'],
-    talkingPoints: '<to be filled later>',
+    talkingPoints: 'Visit us to learn about our latest innovations',
     keyPeople: [
       {
         id: 'p1',
@@ -27,13 +40,14 @@ const FLOOR_MAP_BOOTHS = [
   },
   {
     id: '2',
-    name: 'Shopify Booth',
+    name: 'Shopify',
     companyName: 'Shopify',
-    description: '<to be filled later>',
-    x: 400,
-    y: 150,
+    description: 'E-Commerce Platform',
+    x: 0.8,    // 80% from left
+    y: 0.2,    // 20% from top
+    color: '#96BE28',
     tags: ['E-Commerce', 'Web Dev', 'Payments'],
-    talkingPoints: '<to be filled later>',
+    talkingPoints: 'Explore opportunities with the commerce platform',
     keyPeople: [
       {
         id: 'p2',
@@ -47,13 +61,14 @@ const FLOOR_MAP_BOOTHS = [
   },
   {
     id: '3',
-    name: 'Amplitude Booth',
+    name: 'Amplitude',
     companyName: 'Amplitude',
-    description: '<to be filled later>',
-    x: 300,
-    y: 350,
+    description: 'Analytics & Data Platform',
+    x: 0.2,    // 20% from left
+    y: 0.8,    // 80% from top
+    color: '#7B68EE',
     tags: ['Analytics', 'Data Science', 'Product'],
-    talkingPoints: '<to be filled later>',
+    talkingPoints: 'Discover data-driven product insights',
     keyPeople: [
       {
         id: 'p3',
@@ -67,13 +82,14 @@ const FLOOR_MAP_BOOTHS = [
   },
   {
     id: '4',
-    name: 'Foresters Financial Booth',
+    name: 'Foresters Financial',
     companyName: 'Foresters Financial',
-    description: '<to be filled later>',
-    x: 550,
-    y: 280,
+    description: 'Financial Services & Insurance',
+    x: 0.8,    // 80% from left
+    y: 0.8,    // 80% from top
+    color: '#FF6B35',
     tags: ['Finance', 'Insurance', 'Actuarial'],
-    talkingPoints: '<to be filled later>',
+    talkingPoints: 'Build your career in financial services',
     keyPeople: [
       {
         id: 'p4',
@@ -87,177 +103,149 @@ const FLOOR_MAP_BOOTHS = [
   },
 ]
 
-// Legacy mock data for reference
-const MOCK_BOOTHS = [
-  {
-    id: '1',
-    name: 'Google Booth',
-    companyName: 'Google',
-    description: 'Search & Advertising platform',
-    latitude: 40.7128,
-    longitude: -74.006,
-    tags: ['AI/ML', 'Cloud', 'Web Dev'],
-    keyPeople: [
-      {
-        id: 'p1',
-        name: 'Sarah Chen',
-        role: 'Engineering Manager',
-        company: 'Google',
-        bio: 'Leading ML infrastructure team',
-        expertise: ['ML', 'System Design', 'Leadership'],
-      },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Microsoft Booth',
-    companyName: 'Microsoft',
-    description: 'Cloud & Enterprise Solutions',
-    latitude: 40.715,
-    longitude: -74.008,
-    tags: ['Cloud', 'Enterprise', 'Security'],
-    keyPeople: [
-      {
-        id: 'p2',
-        name: 'James Wilson',
-        role: 'Senior Developer',
-        company: 'Microsoft',
-        bio: 'Azure cloud architect',
-        expertise: ['Cloud Architecture', 'DevOps', 'Security'],
-      },
-    ],
-  },
-  {
-    id: '3',
-    name: 'Meta Booth',
-    companyName: 'Meta',
-    description: 'Social & VR Innovation',
-    latitude: 40.71,
-    longitude: -74.004,
-    tags: ['Web Dev', 'VR/AR', 'Mobile Dev'],
-    keyPeople: [
-      {
-        id: 'p3',
-        name: 'Emma Rodriguez',
-        role: 'Product Manager',
-        company: 'Meta',
-        bio: 'Building next-gen social experiences',
-        expertise: ['Product', 'UX', 'Community'],
-      },
-    ],
-  },
-]
-
 export default function Map() {
-  const { booths, selectedBooth, setBooths, setSelectedBooth } = useAppStore()
+  const { selectedBooth, setSelectedBooth } = useAppStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTag, setSelectedTag] = useState(null)
-  const [filteredBooths, setFilteredBooths] = useState([])
+  const [filteredBooths, setFilteredBooths] = useState(SPONSOR_BOOTHS)
   const [userLocation, setUserLocation] = useState(null)
+  const [userPixelPosition, setUserPixelPosition] = useState({ x: 50, y: 50 })
   const [locationLoading, setLocationLoading] = useState(true)
   const [locationError, setLocationError] = useState(null)
+  
+  // Refs for managing geolocation
+  const watchIdRef = useRef(null)
+  const initialLocationRef = useRef(null)
 
-  // Initialize geolocation tracking
+  // Initialize real-time geolocation tracking
   useEffect(() => {
-    if ('geolocation' in navigator) {
-      // Request user's current location
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude, accuracy } = position.coords
-          const locationData = {
-            latitude,
-            longitude,
-            accuracy,
-            timestamp: new Date().toISOString(),
-            floor: 'MyHall Floor 3', // Assuming this floor location
-          }
-          setUserLocation(locationData)
-          setLocationLoading(false)
-          console.log(`User location: ${latitude}, ${longitude} (accuracy: ${accuracy}m)`)
-          
-          // Track location with Amplitude
-          if (window.amplitude) {
-            window.amplitude.getInstance().logEvent('map_page_loaded', {
-              ...locationData,
-              event_type: 'geolocation_initial_detection',
-            })
-          }
-        },
-        (error) => {
-          setLocationError(error.message)
-          setLocationLoading(false)
-          console.warn('Geolocation error:', error)
-          
-          // Log error to Amplitude
-          if (window.amplitude) {
-            window.amplitude.getInstance().logEvent('geolocation_error', {
-              error_code: error.code,
-              error_message: error.message,
-              timestamp: new Date().toISOString(),
-            })
-          }
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0,
-        }
-      )
-
-      // Watch user location for continuous tracking
-      const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const { latitude, longitude, accuracy } = position.coords
-          const locationData = {
-            latitude,
-            longitude,
-            accuracy,
-            timestamp: new Date().toISOString(),
-            floor: 'MyHall Floor 3',
-          }
-          setUserLocation(locationData)
-          console.log(`Location updated: ${latitude}, ${longitude}`)
-          
-          // Log continuous location updates to Amplitude
-          if (window.amplitude) {
-            window.amplitude.getInstance().logEvent('user_location_updated', {
-              ...locationData,
-              event_type: 'geolocation_continuous_tracking',
-            })
-          }
-        },
-        (error) => {
-          console.warn('Watch position error:', error)
-          if (window.amplitude) {
-            window.amplitude.getInstance().logEvent('geolocation_watch_error', {
-              error_code: error.code,
-              error_message: error.message,
-              timestamp: new Date().toISOString(),
-            })
-          }
-        },
-        {
-          enableHighAccuracy: false,
-          timeout: 5000,
-          maximumAge: 10000,
-        }
-      )
-
-      return () => navigator.geolocation.clearWatch(watchId)
-    } else {
+    if (!('geolocation' in navigator)) {
       setLocationError('Geolocation is not supported by your browser')
       setLocationLoading(false)
+      return
+    }
+
+    // Get initial location to establish center point
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords
+        initialLocationRef.current = { latitude, longitude }
+        setUserLocation({ latitude, longitude, accuracy })
+        setLocationLoading(false)
+        console.log(`Initial position: ${latitude}, ${longitude} (accuracy: ${accuracy}m)`)
+        
+        // Log to Amplitude
+        if (window.amplitude) {
+          window.amplitude.getInstance().logEvent('map_page_loaded', {
+            latitude,
+            longitude,
+            accuracy,
+            event_type: 'geolocation_initial_detection',
+          })
+        }
+      },
+      (error) => {
+        setLocationError(error.message)
+        setLocationLoading(false)
+        console.warn('Geolocation error:', error)
+        
+        if (window.amplitude) {
+          window.amplitude.getInstance().logEvent('geolocation_error', {
+            error_code: error.code,
+            error_message: error.message,
+          })
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    )
+
+    // Start continuous real-time tracking with watchPosition
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords
+        setUserLocation({ latitude, longitude, accuracy })
+        
+        if (initialLocationRef.current) {
+          // Calculate offset from initial position
+          const latDiff = latitude - initialLocationRef.current.latitude
+          const lonDiff = longitude - initialLocationRef.current.longitude
+          
+          // Convert meters per degree (approximate)
+          const metersPerDegreeLat = 111000
+          const metersPerDegreeLon = 111000 * Math.cos((latitude * Math.PI) / 180)
+          
+          const metersLat = latDiff * metersPerDegreeLat
+          const metersLon = lonDiff * metersPerDegreeLon
+          
+          // Convert to position within 75m × 75m room
+          // User starts at center of room: map center (0.5, 0.5)
+          // Room extends from 12.5% to 87.5% on both axes
+          const roomCenterX = 0.5
+          const roomCenterY = 0.5
+          const roomHalfWidth = ROOM_WIDTH_METERS / 2  // 37.5m
+          const roomHalfHeight = ROOM_HEIGHT_METERS / 2 // 37.5m
+          
+          // Convert meters to percentage of map (total 100%)
+          const percentX = (metersLon / (ROOM_WIDTH_METERS * 2)) * 100
+          const percentY = -(metersLat / (ROOM_HEIGHT_METERS * 2)) * 100
+          
+          // Position relative to room center
+          let pixelX = roomCenterX * 100 + percentX
+          let pixelY = roomCenterY * 100 + percentY
+          
+          // Constrain to room bounds (12.5% to 87.5%)
+          const minX = ROOM_BOUNDS.minX * 100
+          const maxX = ROOM_BOUNDS.maxX * 100
+          const minY = ROOM_BOUNDS.minY * 100
+          const maxY = ROOM_BOUNDS.maxY * 100
+          
+          setUserPixelPosition({
+            x: Math.max(minX, Math.min(maxX, pixelX)),
+            y: Math.max(minY, Math.min(maxY, pixelY)),
+          })
+        }
+        
+        console.log(`Location updated: ${latitude}, ${longitude} → Position: ${userPixelPosition.x.toFixed(1)}%, ${userPixelPosition.y.toFixed(1)}%`)
+        
+        if (window.amplitude) {
+          window.amplitude.getInstance().logEvent('user_location_updated', {
+            latitude,
+            longitude,
+            accuracy,
+            event_type: 'geolocation_continuous_tracking',
+          })
+        }
+      },
+      (error) => {
+        console.warn('Watch position error:', error)
+        if (window.amplitude) {
+          window.amplitude.getInstance().logEvent('geolocation_watch_error', {
+            error_code: error.code,
+            error_message: error.message,
+          })
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 500,  // Update more frequently for live tracking
+      }
+    )
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+      }
     }
   }, [])
 
-  // Initialize booths from floor map data
+  // Handle filtering and search
   useEffect(() => {
-    // TODO: Fetch booths from Convex backend
-    setBooths(FLOOR_MAP_BOOTHS)
-  }, [setBooths])
-
-  useEffect(() => {
-    let filtered = booths
+    let filtered = SPONSOR_BOOTHS
 
     if (searchQuery) {
       filtered = filtered.filter(
@@ -272,49 +260,48 @@ export default function Map() {
     }
 
     setFilteredBooths(filtered)
-  }, [booths, searchQuery, selectedTag])
+  }, [searchQuery, selectedTag])
 
-  const allTags = Array.from(new Set(booths.flatMap((b) => b.tags)))
+  const allTags = Array.from(new Set(SPONSOR_BOOTHS.flatMap((b) => b.tags)))
 
   const handleBoothClick = (booth) => {
     setSelectedBooth(booth)
     
-    // Track booth visit with Amplitude and store in app state
     if (window.amplitude) {
       window.amplitude.getInstance().logEvent('booth_clicked', {
         booth_id: booth.id,
         booth_name: booth.name,
         company_name: booth.companyName,
-        user_location: userLocation,
+        user_position: userPixelPosition,
         timestamp: new Date().toISOString(),
       })
     }
     
-    // Store booth visit in app state for backend sync
-    const boothVisit = {
-      boothId: booth.id,
-      boothName: booth.name,
-      companyName: booth.companyName,
-      visitedAt: new Date().toISOString(),
-      userLocation,
-    }
-    
-    // Add to store (will be synced to Convex backend)
-    // TODO: This will be persisted to Convex
-    console.log('Booth visit recorded:', boothVisit)
+    console.log('Booth clicked:', booth.name)
   }
 
-  const handleGeneratePersonalizedSummary = (booth) => {
-    // TODO: Call AI service to generate personalized booth summary
-    // based on user's resume, interests, and target roles
-    console.log('Generate summary for booth:', booth.id)
+  const getDistanceToUser = (booth) => {
+    if (!userPixelPosition) return null
+    // Convert booth position from decimal (0-1) to percentage (0-100)
+    const boothPixelX = booth.x * 100
+    const boothPixelY = booth.y * 100
+    
+    const dx = boothPixelX - userPixelPosition.x
+    const dy = boothPixelY - userPixelPosition.y
+    const pixelDistance = Math.sqrt(dx * dx + dy * dy)
+    
+    // Convert pixel distance to meters
+    // 75% of map = 75m of room (from 12.5% to 87.5%)
+    // So 1% of map ≈ 1m in the room
+    const estimatedDistance = Math.round(pixelDistance)
+    return estimatedDistance
   }
 
   return (
     <div className="map-page">
       <div className="map-header">
         <h1>Career Fair Map</h1>
-        <p className="subtitle">Explore booths and companies</p>
+        <p className="subtitle">Real-time tracking enabled • 75m × 75m venue</p>
       </div>
 
       <div className="map-container">
@@ -329,37 +316,53 @@ export default function Map() {
                 className="floor-image"
               />
               
-              {/* User location indicator */}
-              {userLocation && !locationError && (
+              {/* User real-time location indicator */}
+              {!locationError && (
                 <div 
-                  className="user-location-indicator"
-                  title={`You are here (accuracy: ${Math.round(userLocation.accuracy)}m)`}
+                  className="user-location-dot"
+                  style={{
+                    left: `${userPixelPosition.x}%`,
+                    top: `${userPixelPosition.y}%`,
+                  }}
+                  title={`You are here${userLocation ? ` (accuracy: ${Math.round(userLocation.accuracy)}m)` : ''}`}
                 >
                   <div className="location-pulse"></div>
+                  <div className="location-inner"></div>
                 </div>
               )}
 
-              {/* Booth markers */}
-              {filteredBooths.map((booth, index) => (
+              {/* Sponsor booth markers */}
+              {filteredBooths.map((booth) => (
                 <div
                   key={booth.id}
-                  className={`booth-marker-dot ${
+                  className={`booth-marker ${
                     selectedBooth?.id === booth.id ? 'selected' : ''
                   }`}
                   style={{
-                    left: `${booth.x}px`,
-                    top: `${booth.y}px`,
+                    left: `${booth.x}%`,
+                    top: `${booth.y}%`,
+                    '--booth-color': booth.color,
                   }}
                   onClick={() => handleBoothClick(booth)}
-                  title={booth.name}
+                  title={`${booth.name} - Click for details`}
                 >
-                  <div className="marker-number">{index + 1}</div>
-                  <div className="marker-tooltip">{booth.name}</div>
+                  <div className="booth-pin" style={{ backgroundColor: booth.color }}>
+                    <MapPin size={16} />
+                  </div>
+                  <div className="booth-label">
+                    <strong>{booth.name}</strong>
+                    {!locationError && (
+                      <div className="booth-distance">
+                        ~{getDistanceToUser(booth)}m away
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
+          {/* Booth details popup */}
           {selectedBooth && (
             <div className="booth-details-popup">
               <button
@@ -376,6 +379,12 @@ export default function Map() {
                 <div className="talking-points-section">
                   <h3>Suggested Talking Points</h3>
                   <p>{selectedBooth.talkingPoints}</p>
+                </div>
+              )}
+
+              {!locationError && (
+                <div className="distance-info">
+                  <strong>📍 Distance from you: ~{getDistanceToUser(selectedBooth)}m</strong>
                 </div>
               )}
 
@@ -406,13 +415,6 @@ export default function Map() {
                   </div>
                 ))}
               </div>
-
-              <button
-                className="btn-personalized-summary"
-                onClick={() => handleGeneratePersonalizedSummary(selectedBooth)}
-              >
-                Get Personalized Summary
-              </button>
             </div>
           )}
         </div>
@@ -468,8 +470,18 @@ export default function Map() {
                     onClick={() => handleBoothClick(booth)}
                   >
                     <div className="booth-header">
-                      <h4>{booth.name}</h4>
-                      <MapPin size={16} />
+                      <div className="booth-title-wrapper">
+                        <div 
+                          className="booth-color-dot"
+                          style={{ backgroundColor: booth.color }}
+                        />
+                        <h4>{booth.name}</h4>
+                      </div>
+                      {!locationError && (
+                        <div className="booth-distance-badge">
+                          ~{getDistanceToUser(booth)}m
+                        </div>
+                      )}
                     </div>
                     <p className="booth-company">{booth.companyName}</p>
                     <p className="booth-desc">{booth.description}</p>
@@ -491,11 +503,11 @@ export default function Map() {
             )}
           </div>
 
-          {/* Geolocation & Analytics Info */}
+          {/* Geolocation Status Panel */}
           <div className="analytics-section">
-            <h3>📍 Geolocation Status</h3>
+            <h3>📍 Location Status</h3>
             {locationLoading ? (
-              <p className="analytics-info">
+              <p className="analytics-info loading">
                 <Loader size={16} className="spinner" /> Detecting location...
               </p>
             ) : locationError ? (
@@ -505,15 +517,15 @@ export default function Map() {
             ) : userLocation ? (
               <div className="location-info">
                 <p className="analytics-info success">
-                  ✓ Location detected
+                  ✓ Real-time tracking active
                 </p>
                 <p className="location-details">
                   Lat: {userLocation.latitude.toFixed(4)}° <br />
                   Lon: {userLocation.longitude.toFixed(4)}° <br />
-                  Accuracy: {Math.round(userLocation.accuracy)}m
+                  Accuracy: ±{Math.round(userLocation.accuracy)}m
                 </p>
                 <p className="location-note">
-                  Assuming this floor location for booth proximity tracking
+                  Your position: {userPixelPosition.x.toFixed(1)}% × {userPixelPosition.y.toFixed(1)}%
                 </p>
               </div>
             ) : null}
