@@ -1,25 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Authenticated,
   Unauthenticated,
-  AuthLoading,
   useMutation,
   useQuery,
 } from "convex/react";
-import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/clerk-react";
+import { SignInButton, UserButton } from "@clerk/clerk-react";
 import { SpeechToTextDemo } from "./components/SpeechToTextDemo";
 import { api } from "../convex/_generated/api";
-import { initAmplitude, setAmplitudeUserId } from "./lib/amplitude";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"speech" | "numbers">("speech");
-
-  // Initialize Amplitude on app mount
-  useEffect(() => {
-    initAmplitude();
-  }, []);
 
   return (
     <>
@@ -82,38 +75,12 @@ export default function App() {
   );
 }
 
-function SignInForm() {
-  return (
-    <div className="flex flex-col gap-8 w-96 mx-auto">
-      <p>Log in to see the numbers</p>
-      <SignInButton mode="modal">
-        <button className="bg-dark dark:bg-light text-light dark:text-dark text-sm px-4 py-2 rounded-md border-2">
-          Sign in
-        </button>
-      </SignInButton>
-      <SignUpButton mode="modal">
-        <button className="bg-dark dark:bg-light text-light dark:text-dark text-sm px-4 py-2 rounded-md border-2">
-          Sign up
-        </button>
-      </SignUpButton>
-    </div>
-  );
-}
-
 function Content() {
   const { viewer, numbers } =
     useQuery(api.myFunctions.listNumbers, {
       count: 10,
     }) ?? {};
   const addNumber = useMutation(api.myFunctions.addNumber);
-  const { user } = useUser();
-
-  // Set Amplitude user ID when authenticated
-  useEffect(() => {
-    if (user?.id) {
-      setAmplitudeUserId(user.id);
-    }
-  }, [user?.id]);
 
   if (viewer === undefined || numbers === undefined) {
     return (
