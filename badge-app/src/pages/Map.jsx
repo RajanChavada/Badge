@@ -1,9 +1,93 @@
 import { useState, useEffect } from 'react'
 import { useAppStore } from '../store/useAppStore.js'
-import { MapPin, Search, Filter } from 'lucide-react'
+import { MapPin, Search, Filter, Loader } from 'lucide-react'
 import './Map.css'
 
-// Mock data for booths - replace with Convex data
+// Floor map booths with pixel coordinates relative to the floor image
+const FLOOR_MAP_BOOTHS = [
+  {
+    id: '1',
+    name: 'Google Sponsor Booth',
+    companyName: 'Google',
+    description: '<to be filled later>',
+    x: 150,
+    y: 200,
+    tags: ['AI/ML', 'Cloud', 'Web Dev'],
+    talkingPoints: '<to be filled later>',
+    keyPeople: [
+      {
+        id: 'p1',
+        name: 'To be announced',
+        role: 'TBA',
+        company: 'Google',
+        bio: 'Connect with us at the booth',
+        expertise: ['AI/ML', 'Cloud', 'Web Dev'],
+      },
+    ],
+  },
+  {
+    id: '2',
+    name: 'Shopify Booth',
+    companyName: 'Shopify',
+    description: '<to be filled later>',
+    x: 400,
+    y: 150,
+    tags: ['E-Commerce', 'Web Dev', 'Payments'],
+    talkingPoints: '<to be filled later>',
+    keyPeople: [
+      {
+        id: 'p2',
+        name: 'To be announced',
+        role: 'TBA',
+        company: 'Shopify',
+        bio: 'Connect with us at the booth',
+        expertise: ['E-Commerce', 'Web Dev', 'Payments'],
+      },
+    ],
+  },
+  {
+    id: '3',
+    name: 'Amplitude Booth',
+    companyName: 'Amplitude',
+    description: '<to be filled later>',
+    x: 300,
+    y: 350,
+    tags: ['Analytics', 'Data Science', 'Product'],
+    talkingPoints: '<to be filled later>',
+    keyPeople: [
+      {
+        id: 'p3',
+        name: 'To be announced',
+        role: 'TBA',
+        company: 'Amplitude',
+        bio: 'Connect with us at the booth',
+        expertise: ['Analytics', 'Data Science', 'Product'],
+      },
+    ],
+  },
+  {
+    id: '4',
+    name: 'Foresters Financial Booth',
+    companyName: 'Foresters Financial',
+    description: '<to be filled later>',
+    x: 550,
+    y: 280,
+    tags: ['Finance', 'Insurance', 'Actuarial'],
+    talkingPoints: '<to be filled later>',
+    keyPeople: [
+      {
+        id: 'p4',
+        name: 'To be announced',
+        role: 'TBA',
+        company: 'Foresters Financial',
+        bio: 'Connect with us at the booth',
+        expertise: ['Finance', 'Insurance', 'Actuarial'],
+      },
+    ],
+  },
+]
+
+// Legacy mock data for reference
 const MOCK_BOOTHS = [
   {
     id: '1',
@@ -69,11 +153,107 @@ export default function Map() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTag, setSelectedTag] = useState(null)
   const [filteredBooths, setFilteredBooths] = useState([])
+  const [userLocation, setUserLocation] = useState(null)
+  const [locationLoading, setLocationLoading] = useState(true)
+  const [locationError, setLocationError] = useState(null)
 
+  // Initialize geolocation tracking
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      // Request user's current location
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude, accuracy } = position.coords
+          const locationData = {
+            latitude,
+            longitude,
+            accuracy,
+            timestamp: new Date().toISOString(),
+            floor: 'MyHall Floor 3', // Assuming this floor location
+          }
+          setUserLocation(locationData)
+          setLocationLoading(false)
+          console.log(`User location: ${latitude}, ${longitude} (accuracy: ${accuracy}m)`)
+          
+          // Track location with Amplitude
+          if (window.amplitude) {
+            window.amplitude.getInstance().logEvent('map_page_loaded', {
+              ...locationData,
+              event_type: 'geolocation_initial_detection',
+            })
+          }
+        },
+        (error) => {
+          setLocationError(error.message)
+          setLocationLoading(false)
+          console.warn('Geolocation error:', error)
+          
+          // Log error to Amplitude
+          if (window.amplitude) {
+            window.amplitude.getInstance().logEvent('geolocation_error', {
+              error_code: error.code,
+              error_message: error.message,
+              timestamp: new Date().toISOString(),
+            })
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0,
+        }
+      )
+
+      // Watch user location for continuous tracking
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude, accuracy } = position.coords
+          const locationData = {
+            latitude,
+            longitude,
+            accuracy,
+            timestamp: new Date().toISOString(),
+            floor: 'MyHall Floor 3',
+          }
+          setUserLocation(locationData)
+          console.log(`Location updated: ${latitude}, ${longitude}`)
+          
+          // Log continuous location updates to Amplitude
+          if (window.amplitude) {
+            window.amplitude.getInstance().logEvent('user_location_updated', {
+              ...locationData,
+              event_type: 'geolocation_continuous_tracking',
+            })
+          }
+        },
+        (error) => {
+          console.warn('Watch position error:', error)
+          if (window.amplitude) {
+            window.amplitude.getInstance().logEvent('geolocation_watch_error', {
+              error_code: error.code,
+              error_message: error.message,
+              timestamp: new Date().toISOString(),
+            })
+          }
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 5000,
+          maximumAge: 10000,
+        }
+      )
+
+      return () => navigator.geolocation.clearWatch(watchId)
+    } else {
+      setLocationError('Geolocation is not supported by your browser')
+      setLocationLoading(false)
+    }
+  }, [])
+
+  // Initialize booths from floor map data
   useEffect(() => {
     // TODO: Fetch booths from Convex backend
-    // Include geolocation tracking with Amplitude
-    setBooths(MOCK_BOOTHS)
+    setBooths(FLOOR_MAP_BOOTHS)
   }, [setBooths])
 
   useEffect(() => {
@@ -98,8 +278,30 @@ export default function Map() {
 
   const handleBoothClick = (booth) => {
     setSelectedBooth(booth)
-    // TODO: Track booth visit with Amplitude
-    // Start tracking time spent at booth
+    
+    // Track booth visit with Amplitude and store in app state
+    if (window.amplitude) {
+      window.amplitude.getInstance().logEvent('booth_clicked', {
+        booth_id: booth.id,
+        booth_name: booth.name,
+        company_name: booth.companyName,
+        user_location: userLocation,
+        timestamp: new Date().toISOString(),
+      })
+    }
+    
+    // Store booth visit in app state for backend sync
+    const boothVisit = {
+      boothId: booth.id,
+      boothName: booth.name,
+      companyName: booth.companyName,
+      visitedAt: new Date().toISOString(),
+      userLocation,
+    }
+    
+    // Add to store (will be synced to Convex backend)
+    // TODO: This will be persisted to Convex
+    console.log('Booth visit recorded:', boothVisit)
   }
 
   const handleGeneratePersonalizedSummary = (booth) => {
@@ -119,65 +321,43 @@ export default function Map() {
         {/* Map View */}
         <div className="map-view">
           <div className="map-canvas">
-            <svg viewBox="0 0 800 600" className="map-svg">
-              {/* Simple SVG map background */}
-              <rect width="800" height="600" fill="#e8f4f8" />
-              <g className="grid" opacity="0.1">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <line
-                    key={`h${i}`}
-                    x1="0"
-                    y1={i * 75}
-                    x2="800"
-                    y2={i * 75}
-                    stroke="#999"
-                  />
-                ))}
-                {Array.from({ length: 11 }).map((_, i) => (
-                  <line
-                    key={`v${i}`}
-                    x1={i * 80}
-                    y1="0"
-                    x2={i * 80}
-                    y2="600"
-                    stroke="#999"
-                  />
-                ))}
-              </g>
+            {/* Floor image background */}
+            <div className="floor-image-container">
+              <img 
+                src="/floor-map.jpg" 
+                alt="Career Fair Floor Map" 
+                className="floor-image"
+              />
+              
+              {/* User location indicator */}
+              {userLocation && !locationError && (
+                <div 
+                  className="user-location-indicator"
+                  title={`You are here (accuracy: ${Math.round(userLocation.accuracy)}m)`}
+                >
+                  <div className="location-pulse"></div>
+                </div>
+              )}
 
-              {/* Plot booth markers */}
-              {filteredBooths.map((booth, index) => {
-                const x = (booth.longitude + 74.01) * 100000 % 800
-                const y = (booth.latitude - 40.71) * 100000 % 600
-                return (
-                  <g key={booth.id}>
-                    <circle
-                      cx={x}
-                      cy={y}
-                      r="20"
-                      fill={
-                        selectedBooth?.id === booth.id ? '#667eea' : '#764ba2'
-                      }
-                      opacity="0.8"
-                      className="booth-marker"
-                      onClick={() => handleBoothClick(booth)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    <text
-                      x={x}
-                      y={y}
-                      textAnchor="middle"
-                      dy="0.3em"
-                      fill="white"
-                      fontSize="12"
-                      fontWeight="bold"
-                    >
-                      {index + 1}
-                    </text>
-                  </g>
-                )
-              })}
-            </svg>
+              {/* Booth markers */}
+              {filteredBooths.map((booth, index) => (
+                <div
+                  key={booth.id}
+                  className={`booth-marker-dot ${
+                    selectedBooth?.id === booth.id ? 'selected' : ''
+                  }`}
+                  style={{
+                    left: `${booth.x}px`,
+                    top: `${booth.y}px`,
+                  }}
+                  onClick={() => handleBoothClick(booth)}
+                  title={booth.name}
+                >
+                  <div className="marker-number">{index + 1}</div>
+                  <div className="marker-tooltip">{booth.name}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {selectedBooth && (
@@ -191,6 +371,13 @@ export default function Map() {
               <h2>{selectedBooth.name}</h2>
               <p className="company-name">{selectedBooth.companyName}</p>
               <p className="description">{selectedBooth.description}</p>
+
+              {selectedBooth.talkingPoints && (
+                <div className="talking-points-section">
+                  <h3>Suggested Talking Points</h3>
+                  <p>{selectedBooth.talkingPoints}</p>
+                </div>
+              )}
 
               <div className="tags">
                 {selectedBooth.tags.map((tag) => (
@@ -306,13 +493,30 @@ export default function Map() {
 
           {/* Geolocation & Analytics Info */}
           <div className="analytics-section">
-            <h3>Activity</h3>
-            <p className="analytics-info">
-              📍 Geolocation tracking enabled
-              <br />
-              {/* TODO: Display time spent at each booth */}
-              Time per booth: --
-            </p>
+            <h3>📍 Geolocation Status</h3>
+            {locationLoading ? (
+              <p className="analytics-info">
+                <Loader size={16} className="spinner" /> Detecting location...
+              </p>
+            ) : locationError ? (
+              <p className="analytics-info error">
+                ❌ {locationError}
+              </p>
+            ) : userLocation ? (
+              <div className="location-info">
+                <p className="analytics-info success">
+                  ✓ Location detected
+                </p>
+                <p className="location-details">
+                  Lat: {userLocation.latitude.toFixed(4)}° <br />
+                  Lon: {userLocation.longitude.toFixed(4)}° <br />
+                  Accuracy: {Math.round(userLocation.accuracy)}m
+                </p>
+                <p className="location-note">
+                  Assuming this floor location for booth proximity tracking
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

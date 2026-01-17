@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
+import { useMutation, useQuery } from 'convex/react'
 import { useAppStore } from '../store/useAppStore.js'
+import { api } from '../../convex/_generated/api.js'
+import { extractTextFromPDF } from '../utils/pdfParser.js'
 import { Upload, Save } from 'lucide-react'
 import './Profile.css'
 
@@ -10,6 +13,8 @@ const ROLES = ['Software Engineer', 'Product Manager', 'Data Scientist', 'DevOps
 
 export default function Profile() {
   const { user } = useUser()
+  const getProfileQuery = useQuery(api.users.getProfile, user?.id ? { clerkId: user.id } : 'skip')
+  const upsertProfileMutation = useMutation(api.users.upsertProfile)
   const { userProfile, setUserProfile } = useAppStore()
   const [isEditing, setIsEditing] = useState(!userProfile)
   const [formData, setFormData] = useState(
@@ -35,6 +40,32 @@ export default function Profile() {
   )
   const [resumeFile, setResumeFile] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [loadingProfile, setLoadingProfile] = useState(false)
+  const [status, setStatus] = useState('')
+  const [error, setError] = useState('')
+  const [extractedResumeText, setExtractedResumeText] = useState('')
+
+  // Load existing profile from Convex when the user signs in
+  useEffect(() => {
+    if (!getProfileQuery) return
+    
+    const profile = getProfileQuery
+    if (profile) {
+      const mapped = {
+        name: profile.name || user?.fullName || '',
+        education: profile.identity?.headline || '',
+        experience: profile.resumeText || '',
+        contactInfo: profile.email || user?.primaryEmailAddress?.emailAddress || '',
+        interests: profile.identity?.skills || [],
+        targetSectors: profile.identity?.interests || [],
+        targetRoles: profile.identity?.goals || [],
+      }
+      setFormData(mapped)
+      setIsEditing(false)
+      setUserProfile({ ...profile, ...mapped })
+      setLoadingProfile(false)
+    }
+  }, [getProfileQuery, setUserProfile, user])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -55,51 +86,71 @@ export default function Profile() {
     if (file) {
       setResumeFile(file)
       setUploading(true)
+      setError('')
 
-      // TODO: Parse resume with AI service
-      // 1. Upload to Convex storage
-      // 2. Call AI parsing service to extract:
-      //    - Name, email, phone
-      //    - Skills
-      //    - Experience history
-      //    - Education
-      // 3. Pre-populate form fields
-      // 4. Update user profile with parsed data
-
-      setTimeout(() => {
+      try {
+        // Extract text from PDF
+        const extractedText = await extractTextFromPDF(file)
+        setExtractedResumeText(extractedText)
+        setStatus('Resume extracted successfully!')
+      } catch (err) {
+        console.error('Resume parsing error:', err)
+        setError('Could not parse PDF. Please try again.')
+      } finally {
         setUploading(false)
-      }, 2000)
+      }
     }
   }
 
   const handleSave = async () => {
+    if (!user?.id) return
+
     setUploading(true)
+    setStatus('Saving to Convex...')
+    setError('')
 
-    // TODO: Save profile to Convex backend
-    // 1. Validate form data
-    // 2. Upload resume if provided
-    // 3. Save to Convex database
-    // 4. Update local store
+    const email = formData.contactInfo || user?.primaryEmailAddress?.emailAddress || ''
+    const resumeText = extractedResumeText || [formData.experience, formData.education].filter(Boolean).join('\n').trim()
 
-    const newProfile = {
-      id: userProfile?.id || `profile-${Date.now()}`,
-      userId: user?.id || '',
-      name: formData.name,
-      email: formData.contactInfo,
-      education: formData.education,
-      experience: formData.experience,
-      contactInfo: formData.contactInfo,
-      interests: formData.interests,
-      targetSectors: formData.targetSectors,
-      targetRoles: formData.targetRoles,
-      resumeUrl: userProfile?.resumeUrl,
-      createdAt: userProfile?.createdAt || Date.now(),
-      updatedAt: Date.now(),
+    try {
+      await upsertProfileMutation({
+        clerkId: user.id,
+        email,
+        name: formData.name || user?.fullName || '',
+        resumeText: resumeText || undefined,
+        identity: {
+          headline: formData.education || formData.experience || '',
+          skills: formData.interests,
+          interests: formData.targetSectors,
+          goals: formData.targetRoles,
+        },
+      })
+
+      const newProfile = {
+        id: userProfile?.id || `profile-${Date.now()}`,
+        userId: user.id,
+        name: formData.name,
+        email,
+        education: formData.education,
+        experience: formData.experience,
+        contactInfo: formData.contactInfo,
+        interests: formData.interests,
+        targetSectors: formData.targetSectors,
+        targetRoles: formData.targetRoles,
+        resumeUrl: userProfile?.resumeUrl,
+        createdAt: userProfile?.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      }
+
+      setUserProfile(newProfile)
+      setIsEditing(false)
+      setStatus('Saved!')
+    } catch (err) {
+      console.error(err)
+      setError('Failed to save profile to Convex.')
+    } finally {
+      setUploading(false)
     }
-
-    setUserProfile(newProfile)
-    setIsEditing(false)
-    setUploading(false)
   }
 
   const handleCancel = () => {
@@ -123,6 +174,9 @@ export default function Profile() {
         <h1>Your Profile</h1>
         <p className="subtitle">Build your professional identity</p>
       </div>
+
+      {loadingProfile && <p className="loading">Loading profile...</p>}
+      {error && <p className="error-text">{error}</p>}
 
       <div className="profile-container">
         {/* Resume Section */}
@@ -265,6 +319,7 @@ export default function Profile() {
                 <button type="button" className="btn-cancel" onClick={handleCancel}>
                   Cancel
                 </button>
+                {status && <span className="status-text">{status}</span>}
               </div>
             </form>
           ) : (
