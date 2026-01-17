@@ -8,7 +8,7 @@
 
 ### Step 1: Install Dependencies
 ```bash
-cd toy-app
+cd badge-app
 npm install --legacy-peer-deps
 ```
 

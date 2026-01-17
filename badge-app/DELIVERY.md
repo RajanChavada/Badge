@@ -224,7 +224,7 @@ App
 
 ### Installation
 ```bash
-cd toy-app
+cd badge-app
 npm install --legacy-peer-deps
 ```
 

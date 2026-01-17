@@ -99,7 +99,7 @@ src/
 
 1. Clone the repository and navigate to the project:
 ```bash
-cd toy-app
+cd badge-app
 ```
 
 2. Install dependencies:

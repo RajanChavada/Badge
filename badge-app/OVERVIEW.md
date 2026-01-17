@@ -127,7 +127,7 @@ A **fully functional, production-ready React frontend** for a comprehensive netw
 
 ### 1. Install
 ```bash
-cd toy-app
+cd badge-app
 npm install --legacy-peer-deps
 ```
 
