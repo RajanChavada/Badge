@@ -10,10 +10,11 @@ const AMPLITUDE_API_KEY = import.meta.env.VITE_AMPLITUDE_API_KEY;
 let initialized = false;
 
 export function initAmplitude(userId?: string) {
-  if (initialized || !AMPLITUDE_API_KEY) {
-    if (!AMPLITUDE_API_KEY) {
-      console.warn("[Amplitude] No API key - events logged to console only");
-    }
+  if (initialized) return;
+
+  if (!AMPLITUDE_API_KEY) {
+    console.warn("[Amplitude] No API key - events logged to console only");
+    initialized = true;
     return;
   }
 
@@ -26,141 +27,133 @@ export function initAmplitude(userId?: string) {
   }
 
   initialized = true;
-  console.log("[Amplitude] Initialized");
+  console.log("[Amplitude] ✅ Initialized");
 }
 
 export function setAmplitudeUserId(userId: string) {
-  if (AMPLITUDE_API_KEY) {
-    amplitude.setUserId(userId);
-  }
+  amplitude.setUserId(userId);
 }
 
-// Event 1: interaction_started
+// ============================================
+// ENHANCED EVENTS (with feedback loop data)
+// ============================================
+
 export function trackInteractionStarted(props: {
   visitorId: string;
   boothId: string;
   boothName: string;
   mode: "voice" | "manual";
 }) {
-  const event = {
-    event: "interaction_started",
-    props: {
-      visitorId: props.visitorId,
-      visitorBoothId: props.boothId,
-      booth: props.boothName.slice(0, 30),
-      mode: props.mode,
-      ts: Date.now(),
-    },
+  const eventProps = {
+    visitorId: props.visitorId,
+    boothId: props.boothId,
+    booth: props.boothName.slice(0, 30),
+    mode: props.mode,
+    ts: Date.now(),
   };
 
-  if (AMPLITUDE_API_KEY && initialized) {
-    amplitude.track(event.event, event.props);
-  }
-  console.log("[Track]", event);
+  amplitude.track("interaction_started", eventProps);
+  console.log("[Amplitude] 📍 interaction_started", eventProps);
 }
 
-// Event 2: recording_completed
 export function trackRecordingCompleted(props: {
   visitorId: string;
-  visitorBoothId: string;
+  boothId: string;
   durationSec: number;
   willTranscribe: boolean;
 }) {
-  const event = {
-    event: "recording_completed",
-    props: {
-      visitorId: props.visitorId,
-      visitorBoothId: props.visitorBoothId,
-      dur: props.durationSec,
-      transcribe: props.willTranscribe,
-    },
+  const eventProps = {
+    visitorId: props.visitorId,
+    boothId: props.boothId,
+    dur: props.durationSec,
+    transcribe: props.willTranscribe,
   };
 
-  if (AMPLITUDE_API_KEY && initialized) {
-    amplitude.track(event.event, event.props);
-  }
-  console.log("[Track]", event);
+  amplitude.track("recording_completed", eventProps);
+  console.log("[Amplitude] 🎙️ recording_completed", eventProps);
 }
 
-// Event 3: interaction_saved
+/**
+ * ENHANCED: interaction_saved with LLM-processed data
+ * This is the key event for the feedback loop
+ */
 export function trackInteractionSaved(props: {
   visitorId: string;
-  visitorBoothId: string;
+  boothId: string;
+  boothName: string;
   hasAudio: boolean;
   transcriptLen: number;
-  tagCount: number;
-  summaryLen: number;
+  // LLM-enriched fields
+  summary: string;
+  tags: string[];
+  sentiment: "positive" | "neutral" | "negative" | string;
+  confidence: number;
+  keyTopics: string[];
+  llmModel: string;
 }) {
-  const event = {
-    event: "interaction_saved",
-    props: {
-      visitorId: props.visitorId,
-      visitorBoothId: props.visitorBoothId,
-      audio: props.hasAudio,
-      tLen: props.transcriptLen,
-      tags: props.tagCount,
-      sLen: props.summaryLen,
-    },
+  const eventProps = {
+    visitorId: props.visitorId,
+    boothId: props.boothId,
+    booth: props.boothName.slice(0, 20),
+    audio: props.hasAudio,
+    tLen: props.transcriptLen,
+    // Enriched data (compact)
+    sumLen: props.summary.length,
+    tagCount: props.tags.length,
+    tags: props.tags.slice(0, 3).join(","), // Top 3 tags as string
+    sent: props.sentiment,
+    conf: Math.round(props.confidence * 100), // 0-100
+    topics: props.keyTopics.slice(0, 2).join(","),
+    model: props.llmModel,
   };
 
-  if (AMPLITUDE_API_KEY && initialized) {
-    amplitude.track(event.event, event.props);
-  }
-  console.log("[Track]", event);
+  amplitude.track("interaction_saved", eventProps);
+  console.log("[Amplitude] 💾 interaction_saved", eventProps);
 }
 
-// Event 4: identity_evolved
+/**
+ * Track when identity evolves based on accumulated feedback
+ */
 export function trackIdentityEvolved(props: {
   visitorId: string;
-  trigger: "audio" | "manual" | "threshold";
+  trigger: "interaction" | "threshold" | "manual";
   totalInteractions: number;
-  newTagCount: number;
+  topTags: string[];
+  positiveRatio: number;
   version: number;
 }) {
-  const event = {
-    event: "identity_evolved",
-    props: {
-      visitorId: props.visitorId,
-      trigger: props.trigger,
-      intCount: props.totalInteractions,
-      newTags: props.newTagCount,
-      ver: props.version,
-    },
+  const eventProps = {
+    visitorId: props.visitorId,
+    trigger: props.trigger,
+    intCount: props.totalInteractions,
+    topTags: props.topTags.slice(0, 5).join(","),
+    posRatio: Math.round(props.positiveRatio * 100),
+    ver: props.version,
   };
 
-  if (AMPLITUDE_API_KEY && initialized) {
-    amplitude.track(event.event, event.props);
-  }
-  console.log("[Track]", event);
+  amplitude.track("identity_evolved", eventProps);
+  console.log("[Amplitude] 🌱 identity_evolved", eventProps);
 }
 
-// Event 5: recommendation_clicked
 export function trackRecommendationClicked(props: {
   visitorId: string;
-  visitorBoothId: string;
+  boothId: string;
   position: number;
   score: number;
 }) {
-  const event = {
-    event: "recommendation_clicked",
-    props: {
-      visitorId: props.visitorId,
-      visitorBoothId: props.visitorBoothId,
-      pos: props.position,
-      score: Math.round(props.score),
-    },
+  const eventProps = {
+    visitorId: props.visitorId,
+    boothId: props.boothId,
+    pos: props.position,
+    score: Math.round(props.score),
   };
 
-  if (AMPLITUDE_API_KEY && initialized) {
-    amplitude.track(event.event, event.props);
-  }
-  console.log("[Track]", event);
+  amplitude.track("recommendation_clicked", eventProps);
+  console.log("[Amplitude] 👆 recommendation_clicked", eventProps);
 }
 
 export function flushAmplitude() {
-  if (AMPLITUDE_API_KEY && initialized) {
-    amplitude.flush();
-  }
+  amplitude.flush();
 }
 
 export { amplitude };

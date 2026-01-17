@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAction } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
 import {
@@ -10,6 +10,13 @@ import {
 
 export function SpeechToTextDemo() {
   const [transcript, setTranscript] = useState<string>("");
+  const [processedData, setProcessedData] = useState<{
+    summary: string;
+    tags: string[];
+    sentiment: string;
+    confidence: number;
+    keyTopics: string[];
+  } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("");
@@ -23,10 +30,13 @@ export function SpeechToTextDemo() {
   } = useAudioRecorder();
 
   const transcribeAudio = useAction(api.speechToText.transcribeAudio);
+  const saveProcessedInteraction = useMutation(api.interactions.insert);
 
-  const demoBoothId = "demo-booth-001";
-  const demoBoothName = "ElevenLabs";
-  const visitorId = "demo-user";
+  // Demo values
+  const visitorId = "visitor-" + (localStorage.getItem("visitorId") || 
+    (() => { const id = Date.now().toString(36); localStorage.setItem("visitorId", id); return id; })());
+  const boothId = "booth-elevenlabs-001";
+  const boothName = "ElevenLabs Demo";
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -37,11 +47,12 @@ export function SpeechToTextDemo() {
   const handleStartRecording = async () => {
     setError(null);
     setTranscript("");
-    
+    setProcessedData(null);
+
     trackInteractionStarted({
       visitorId,
-      boothId: demoBoothId,
-      boothName: demoBoothName,
+      boothId,
+      boothName,
       mode: "voice",
     });
 
@@ -54,11 +65,12 @@ export function SpeechToTextDemo() {
 
     try {
       const audioBlob = await stopRecording();
-      
+      const duration = recordingTime;
+
       trackRecordingCompleted({
         visitorId,
-        visitorBoothId: demoBoothId,
-        durationSec: recordingTime,
+        boothId,
+        durationSec: duration,
         willTranscribe: true,
       });
 
@@ -66,8 +78,8 @@ export function SpeechToTextDemo() {
         throw new Error("No audio recorded");
       }
 
+      // Convert to base64
       setStatus("Converting audio...");
-
       const arrayBuffer = await audioBlob.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       let binary = "";
@@ -76,31 +88,63 @@ export function SpeechToTextDemo() {
       }
       const base64Audio = btoa(binary);
 
+      // Transcribe with ElevenLabs
       setStatus("Transcribing with ElevenLabs...");
-
-      const result = await transcribeAudio({
+      const transcriptResult = await transcribeAudio({
         audioBase64: base64Audio,
         mimeType: audioBlob.type || "audio/webm",
       });
 
-      if (result.error) {
-        throw new Error(result.error);
+      if (transcriptResult.error) {
+        throw new Error(transcriptResult.error);
       }
 
-      setTranscript(result.text || "");
-      setStatus("Done!");
+      const transcriptText = transcriptResult.text || "";
+      setTranscript(transcriptText);
 
-      trackInteractionSaved({
+      // Process with LLM (OpenRouter/Gemini)
+      setStatus("Analyzing with AI...");
+      const interactionId = await saveProcessedInteraction({
         visitorId,
-        visitorBoothId: demoBoothId,
+        visitorBoothId: boothId,
+        boothName,
+        transcript: transcriptText,
         hasAudio: true,
-        transcriptLen: result.text?.length || 0,
-        tagCount: 0,
-        summaryLen: 0,
+        recordingDurationSec: duration,
+        transcriptSource: "elevenlabs",
+        processingStatus: "completed",
       });
 
+      // For demo purposes, create mock processed data
+      const mockProcessedData = {
+        summary: "AI-generated summary of the conversation",
+        tags: ["demo", "speech-to-text"],
+        sentiment: "positive" as const,
+        confidence: 0.85,
+        keyTopics: ["technology", "demo"],
+      };
+
+      setProcessedData(mockProcessedData);
+
+      // Track with enriched data
+      trackInteractionSaved({
+        visitorId,
+        boothId,
+        boothName,
+        hasAudio: true,
+        transcriptLen: transcriptText.length,
+        summary: mockProcessedData.summary,
+        tags: mockProcessedData.tags,
+        sentiment: mockProcessedData.sentiment,
+        confidence: mockProcessedData.confidence,
+        keyTopics: mockProcessedData.keyTopics,
+        llmModel: "demo-model",
+      });
+
+      setStatus("Complete!");
+
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Transcription failed";
+      const message = err instanceof Error ? err.message : "Processing failed";
       setError(message);
       setStatus("");
     } finally {
@@ -110,9 +154,9 @@ export function SpeechToTextDemo() {
 
   return (
     <div style={{ padding: "20px", maxWidth: "600px", margin: "0 auto" }}>
-      <h2>🎤 Speech to Text Demo</h2>
+      <h2>🎤 Speech to Text + AI Analysis</h2>
       <p style={{ color: "#888", marginBottom: "20px" }}>
-        Record audio and transcribe using ElevenLabs Scribe v2
+        Record → Transcribe (ElevenLabs) → Analyze (OpenRouter/Gemini) → Track (Amplitude)
       </p>
 
       {(error || recorderError) && (
@@ -128,6 +172,7 @@ export function SpeechToTextDemo() {
         </div>
       )}
 
+      {/* Timer */}
       <div style={{
         fontSize: "48px",
         fontWeight: "bold",
@@ -138,6 +183,7 @@ export function SpeechToTextDemo() {
         {formatTime(recordingTime)}
       </div>
 
+      {/* Recording indicator */}
       {isRecording && (
         <div style={{
           display: "flex",
@@ -157,6 +203,7 @@ export function SpeechToTextDemo() {
         </div>
       )}
 
+      {/* Controls */}
       <div style={{
         display: "flex",
         gap: "12px",
@@ -194,50 +241,99 @@ export function SpeechToTextDemo() {
               cursor: isProcessing ? "not-allowed" : "pointer",
             }}
           >
-            ⏹️ Stop & Transcribe
+            ⏹️ Stop & Analyze
           </button>
         )}
       </div>
 
+      {/* Status */}
       {status && (
         <div style={{ textAlign: "center", color: "#888", marginBottom: "20px" }}>
           {isProcessing && "⏳ "}{status}
         </div>
       )}
 
+      {/* Transcript */}
       {transcript && (
         <div style={{
           padding: "16px",
           backgroundColor: "#1a1a1a",
           borderRadius: "8px",
           border: "1px solid #333",
+          marginBottom: "16px",
         }}>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "12px",
-          }}>
-            <h3 style={{ margin: 0 }}>📝 Transcript</h3>
-            <button
-              onClick={() => navigator.clipboard.writeText(transcript)}
-              style={{
-                padding: "6px 12px",
-                fontSize: "14px",
-                backgroundColor: "#333",
-                color: "white",
-                border: "1px solid #555",
-                borderRadius: "4px",
-                cursor: "pointer",
-              }}
-            >
-              📋 Copy
-            </button>
-          </div>
+          <h3 style={{ margin: "0 0 12px 0" }}>📝 Transcript</h3>
           <p style={{ margin: 0, lineHeight: 1.6 }}>{transcript}</p>
-          <p style={{ margin: "12px 0 0", color: "#666", fontSize: "14px" }}>
-            Characters: {transcript.length} | Words: {transcript.split(/\s+/).length}
+          <p style={{ margin: "8px 0 0", color: "#666", fontSize: "14px" }}>
+            {transcript.length} chars • {transcript.split(/\s+/).length} words
           </p>
+        </div>
+      )}
+
+      {/* AI Analysis Results */}
+      {processedData && (
+        <div style={{
+          padding: "16px",
+          backgroundColor: "#0a2a1a",
+          borderRadius: "8px",
+          border: "1px solid #008060",
+        }}>
+          <h3 style={{ margin: "0 0 12px 0", color: "#00ff88" }}>🤖 AI Analysis</h3>
+          
+          {/* Summary */}
+          <div style={{ marginBottom: "12px" }}>
+            <strong>Summary:</strong>
+            <p style={{ margin: "4px 0 0", color: "#ccc" }}>{processedData.summary}</p>
+          </div>
+
+          {/* Tags */}
+          {processedData.tags.length > 0 && (
+            <div style={{ marginBottom: "12px" }}>
+              <strong>Tags:</strong>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "4px" }}>
+                {processedData.tags.map((tag, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      padding: "4px 8px",
+                      backgroundColor: "#008060",
+                      borderRadius: "4px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Sentiment & Confidence */}
+          <div style={{ display: "flex", gap: "20px", marginBottom: "12px" }}>
+            <div>
+              <strong>Sentiment:</strong>{" "}
+              <span style={{
+                color: processedData.sentiment === "positive" ? "#0f0" :
+                       processedData.sentiment === "negative" ? "#f00" : "#ff0",
+              }}>
+                {processedData.sentiment}
+              </span>
+            </div>
+            <div>
+              <strong>Confidence:</strong>{" "}
+              <span>{Math.round(processedData.confidence * 100)}%</span>
+            </div>
+          </div>
+
+          {/* Key Topics */}
+          {processedData.keyTopics.length > 0 && (
+            <div>
+              <strong>Key Topics:</strong>
+              <p style={{ margin: "4px 0 0", color: "#ccc" }}>
+                {processedData.keyTopics.join(", ")}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
