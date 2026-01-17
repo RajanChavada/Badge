@@ -1,53 +1,102 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Authenticated,
   Unauthenticated,
   useMutation,
   useQuery,
 } from "convex/react";
+import { SignInButton, UserButton, useUser } from "@clerk/clerk-react";
+import { SpeechToTextDemo } from "./components/SpeechToTextDemo";
+import { ProfileForm } from "./components/ProfileForm";
 import { api } from "../convex/_generated/api";
-import { SignInButton, SignUpButton, UserButton } from "@clerk/clerk-react";
+import { initAmplitude, setAmplitudeUserId } from "./lib/amplitude";
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<"speech" | "numbers" | "profile">("speech");
+
+  // Initialize Amplitude on app mount
+  useEffect(() => {
+    initAmplitude();
+  }, []);
+
   return (
     <>
       <header className="sticky top-0 z-10 bg-light dark:bg-dark p-4 border-b-2 border-slate-200 dark:border-slate-800 flex flex-row justify-between items-center">
-        Convex + React + Clerk
-        <UserButton />
+        <span className="font-bold">🎫 Badge - Speech to Text</span>
+        <div>
+          <Authenticated>
+            <UserButton />
+          </Authenticated>
+          <Unauthenticated>
+            <SignInButton mode="modal" />
+          </Unauthenticated>
+        </div>
       </header>
-      <main className="p-8 flex flex-col gap-16">
+      <main className="p-8 flex flex-col gap-8">
         <h1 className="text-4xl font-bold text-center">
-          Convex + React + Clerk
+          Badge - Event Networking Copilot
         </h1>
-        <Authenticated>
-          <Content />
-        </Authenticated>
+
+        {/* Tab Navigation - Always visible for testing */}
+        <div className="flex justify-center gap-4 mb-4">
+          <button
+            onClick={() => setActiveTab("speech")}
+            className={`px-4 py-2 rounded-lg font-semibold transition ${
+              activeTab === "speech"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            🎤 Speech to Text
+          </button>
+          <button
+            onClick={() => setActiveTab("numbers")}
+            className={`px-4 py-2 rounded-lg font-semibold transition ${
+              activeTab === "numbers"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            🔢 Numbers Demo
+          </button>
+          <button
+            onClick={() => setActiveTab("profile")}
+            className={`px-4 py-2 rounded-lg font-semibold transition ${
+              activeTab === "profile"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            👤 Profile
+          </button>
+        </div>
+
+        {/* Tab Content - Always visible for testing */}
+        {activeTab === "speech" && <SpeechToTextDemo />}
+        {activeTab === "numbers" && (
+          <Authenticated>
+            <Content />
+          </Authenticated>
+        )}
+        {activeTab === "profile" && (
+          <Authenticated>
+            <ProfileForm />
+          </Authenticated>
+        )}
+
         <Unauthenticated>
-          <SignInForm />
+          <div className="text-center text-gray-500">
+            <p>Sign in above for full features</p>
+          </div>
         </Unauthenticated>
       </main>
     </>
   );
 }
 
-function SignInForm() {
-  return (
-    <div className="flex flex-col gap-8 w-96 mx-auto">
-      <p>Log in to see the numbers</p>
-      <SignInButton mode="modal">
-        <button className="bg-dark dark:bg-light text-light dark:text-dark text-sm px-4 py-2 rounded-md border-2">
-          Sign in
-        </button>
-      </SignInButton>
-      <SignUpButton mode="modal">
-        <button className="bg-dark dark:bg-light text-light dark:text-dark text-sm px-4 py-2 rounded-md border-2">
-          Sign up
-        </button>
-      </SignUpButton>
-    </div>
-  );
-}
+// (unused SignInForm removed)
 
 function Content() {
   const { viewer, numbers } =
@@ -55,6 +104,14 @@ function Content() {
       count: 10,
     }) ?? {};
   const addNumber = useMutation(api.myFunctions.addNumber);
+  const { user } = useUser();
+
+  // Set Amplitude user ID when authenticated
+  useEffect(() => {
+    if (user?.id) {
+      setAmplitudeUserId(user.id);
+    }
+  }, [user?.id]);
 
   if (viewer === undefined || numbers === undefined) {
     return (
