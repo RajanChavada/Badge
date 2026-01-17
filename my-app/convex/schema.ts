@@ -7,6 +7,25 @@ export default defineSchema({
     value: v.number(),
   }),
 
+  // Authenticated users (from Clerk)
+  users: defineTable({
+    clerkId: v.string(),
+    email: v.string(),
+    name: v.string(),
+    resumeText: v.optional(v.string()),
+    identity: v.optional(
+      v.object({
+        headline: v.string(),
+        skills: v.array(v.string()),
+        interests: v.array(v.string()),
+        goals: v.array(v.string()),
+        lastUpdated: v.number(),
+      })
+    ),
+    identityVersion: v.number(),
+    createdAt: v.number(),
+  }).index("by_clerk_id", ["clerkId"]),
+
   // Visitor profiles (evolving identity)
   visitors: defineTable({
     odentifier: v.string(), // visitorId from localStorage or clerkId

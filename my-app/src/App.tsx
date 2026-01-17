@@ -9,10 +9,11 @@ import {
 } from "convex/react";
 import { SignInButton, UserButton } from "@clerk/clerk-react";
 import { SpeechToTextDemo } from "./components/SpeechToTextDemo";
+import { ProfileForm } from "./components/ProfileForm";
 import { api } from "../convex/_generated/api";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"speech" | "numbers">("speech");
+  const [activeTab, setActiveTab] = useState<"speech" | "numbers" | "profile">("speech");
 
   return (
     <>
@@ -32,7 +33,7 @@ export default function App() {
           Badge - Event Networking Copilot
         </h1>
 
-        {/* Tab Navigation - Always visible for testing */}
+        {/* Tab Navigation */}
         <div className="flex justify-center gap-4 mb-4">
           <button
             onClick={() => setActiveTab("speech")}
@@ -54,14 +55,28 @@ export default function App() {
           >
             🔢 Numbers Demo
           </button>
+          <button
+            onClick={() => setActiveTab("profile")}
+            className={`px-4 py-2 rounded-lg font-semibold transition ${
+              activeTab === "profile"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            👤 Profile
+          </button>
         </div>
 
-        {/* Tab Content - Always visible for testing */}
-        {activeTab === "speech" ? (
-          <SpeechToTextDemo />
-        ) : (
+        {/* Tab Content */}
+        {activeTab === "speech" && <SpeechToTextDemo />}
+        {activeTab === "numbers" && (
           <Authenticated>
             <Content />
+          </Authenticated>
+        )}
+        {activeTab === "profile" && (
+          <Authenticated>
+            <ProfileForm />
           </Authenticated>
         )}
 
