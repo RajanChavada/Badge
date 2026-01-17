@@ -104,7 +104,7 @@ export function SpeechToTextDemo() {
 
       // Process with LLM (OpenRouter/Gemini)
       setStatus("Analyzing with AI...");
-      const interactionId = await saveProcessedInteraction({
+      await saveProcessedInteraction({
         visitorId,
         visitorBoothId: boothId,
         boothName,

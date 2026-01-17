@@ -4,17 +4,17 @@ import { useState, useEffect } from "react";
 import {
   Authenticated,
   Unauthenticated,
-  AuthLoading,
   useMutation,
   useQuery,
 } from "convex/react";
-import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/clerk-react";
+import { SignInButton, UserButton, useUser } from "@clerk/clerk-react";
 import { SpeechToTextDemo } from "./components/SpeechToTextDemo";
+import { ProfileForm } from "./components/ProfileForm";
 import { api } from "../convex/_generated/api";
 import { initAmplitude, setAmplitudeUserId } from "./lib/amplitude";
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<"speech" | "numbers">("speech");
+  const [activeTab, setActiveTab] = useState<"speech" | "numbers" | "profile">("speech");
 
   // Initialize Amplitude on app mount
   useEffect(() => {
@@ -61,14 +61,28 @@ export default function App() {
           >
             🔢 Numbers Demo
           </button>
+          <button
+            onClick={() => setActiveTab("profile")}
+            className={`px-4 py-2 rounded-lg font-semibold transition ${
+              activeTab === "profile"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            👤 Profile
+          </button>
         </div>
 
         {/* Tab Content - Always visible for testing */}
-        {activeTab === "speech" ? (
-          <SpeechToTextDemo />
-        ) : (
+        {activeTab === "speech" && <SpeechToTextDemo />}
+        {activeTab === "numbers" && (
           <Authenticated>
             <Content />
+          </Authenticated>
+        )}
+        {activeTab === "profile" && (
+          <Authenticated>
+            <ProfileForm />
           </Authenticated>
         )}
 
@@ -82,23 +96,7 @@ export default function App() {
   );
 }
 
-function SignInForm() {
-  return (
-    <div className="flex flex-col gap-8 w-96 mx-auto">
-      <p>Log in to see the numbers</p>
-      <SignInButton mode="modal">
-        <button className="bg-dark dark:bg-light text-light dark:text-dark text-sm px-4 py-2 rounded-md border-2">
-          Sign in
-        </button>
-      </SignInButton>
-      <SignUpButton mode="modal">
-        <button className="bg-dark dark:bg-light text-light dark:text-dark text-sm px-4 py-2 rounded-md border-2">
-          Sign up
-        </button>
-      </SignUpButton>
-    </div>
-  );
-}
+// (unused SignInForm removed)
 
 function Content() {
   const { viewer, numbers } =
