@@ -13,17 +13,16 @@ const ROOM_BOUNDS = {
   maxY: 0.875,    // 87.5% - bottom edge of room
 }
 
-// Sponsor booths distributed within the room (as percentages of map width/height)
-// Spaced evenly apart: Google (top-left), Shopify (top-right), 
-// Amplitude (bottom-left), Foresters (bottom-right) with good spacing
+// Sponsor booths distributed inside the room (as percentages of map width/height)
+// Positioned inside the lighter square, not at corners
 const SPONSOR_BOOTHS = [
   {
     id: '1',
     name: 'Google',
     companyName: 'Google',
     description: 'Search & Cloud Solutions',
-    x: 0.2,    // 20% from left
-    y: 0.2,    // 20% from top
+    x: 0.3,    // 30% from left (inside square)
+    y: 0.35,   // 35% from top (inside square)
     color: '#4285F4',
     tags: ['AI/ML', 'Cloud', 'Web Dev'],
     talkingPoints: 'Visit us to learn about our latest innovations',
@@ -43,8 +42,8 @@ const SPONSOR_BOOTHS = [
     name: 'Shopify',
     companyName: 'Shopify',
     description: 'E-Commerce Platform',
-    x: 0.8,    // 80% from left
-    y: 0.2,    // 20% from top
+    x: 0.7,    // 70% from left (inside square)
+    y: 0.35,   // 35% from top (inside square)
     color: '#96BE28',
     tags: ['E-Commerce', 'Web Dev', 'Payments'],
     talkingPoints: 'Explore opportunities with the commerce platform',
@@ -64,8 +63,8 @@ const SPONSOR_BOOTHS = [
     name: 'Amplitude',
     companyName: 'Amplitude',
     description: 'Analytics & Data Platform',
-    x: 0.2,    // 20% from left
-    y: 0.8,    // 80% from top
+    x: 0.3,    // 30% from left (inside square)
+    y: 0.65,   // 65% from top (inside square)
     color: '#7B68EE',
     tags: ['Analytics', 'Data Science', 'Product'],
     talkingPoints: 'Discover data-driven product insights',
@@ -85,8 +84,8 @@ const SPONSOR_BOOTHS = [
     name: 'Foresters Financial',
     companyName: 'Foresters Financial',
     description: 'Financial Services & Insurance',
-    x: 0.8,    // 80% from left
-    y: 0.8,    // 80% from top
+    x: 0.7,    // 70% from left (inside square)
+    y: 0.65,   // 65% from top (inside square)
     color: '#FF6B35',
     tags: ['Finance', 'Insurance', 'Actuarial'],
     talkingPoints: 'Build your career in financial services',

@@ -130,10 +130,20 @@
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 8px rgba(0, 0, 0, 0.08);
   border: 3px solid white;
   transition: all 0.3s ease;
   position: relative;
+  animation: booth-pulse 2s ease-in-out infinite;
+}
+
+@keyframes booth-pulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 8px rgba(0, 0, 0, 0.08);
+  }
+  50% {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 12px rgba(0, 0, 0, 0.05);
+  }
 }
 
 .booth-marker:hover .booth-pin {
@@ -163,6 +173,7 @@
 
 .booth-marker:hover .booth-label {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .booth-label strong {
