@@ -14,7 +14,10 @@ const ROLES = ['Software Engineer', 'Product Manager', 'Data Scientist', 'DevOps
 export default function Profile() {
   const { user } = useUser()
   const getProfileQuery = useQuery(api.users.getProfile, user?.id ? { clerkId: user.id } : 'skip')
+  const getResumeDownloadUrlQuery = useQuery(api.users.getResumeDownloadUrl, user?.id ? { clerkId: user.id } : 'skip')
   const upsertProfileMutation = useMutation(api.users.upsertProfile)
+  const generateResumeUploadUrlMutation = useMutation(api.users.generateResumeUploadUrl)
+  const saveResumeFileIdMutation = useMutation(api.users.saveResumeFileId)
   const { userProfile, setUserProfile } = useAppStore()
   const [isEditing, setIsEditing] = useState(!userProfile)
   const [formData, setFormData] = useState(
@@ -113,6 +116,35 @@ export default function Profile() {
     const resumeText = extractedResumeText || [formData.experience, formData.education].filter(Boolean).join('\n').trim()
 
     try {
+      // Upload resume file if one was selected
+      if (resumeFile) {
+        setStatus('Uploading resume file...')
+        
+        // Step 1: Get upload URL from Convex
+        const uploadUrl = await generateResumeUploadUrlMutation()
+        
+        // Step 2: Upload file directly to Convex storage
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': resumeFile.type },
+          body: resumeFile,
+        })
+        
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload resume file')
+        }
+        
+        const { storageId } = await uploadResponse.json()
+        
+        // Step 3: Save the storage ID to the user record
+        await saveResumeFileIdMutation({
+          clerkId: user.id,
+          storageId: storageId,
+        })
+        
+        setStatus('Resume file uploaded. Saving profile...')
+      }
+
       await upsertProfileMutation({
         clerkId: user.id,
         email,
@@ -144,6 +176,7 @@ export default function Profile() {
 
       setUserProfile(newProfile)
       setIsEditing(false)
+      setResumeFile(null)
       setStatus('Saved!')
     } catch (err) {
       console.error(err)
@@ -179,34 +212,6 @@ export default function Profile() {
       {error && <p className="error-text">{error}</p>}
 
       <div className="profile-container">
-        {/* Resume Section */}
-        <section className="resume-section">
-          <h2>Resume</h2>
-          <div className="resume-upload">
-            <div className="upload-area">
-              <Upload size={32} />
-              <h3>Upload Your Resume</h3>
-              <p>PDF, DOC, or DOCX format (Max 5MB)</p>
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx"
-                onChange={handleResumeUpload}
-                disabled={uploading}
-                className="file-input"
-              />
-              {resumeFile && (
-                <p className="file-info">
-                  Selected: <strong>{resumeFile.name}</strong>
-                </p>
-              )}
-              {userProfile?.resumeUrl && (
-                <p className="resume-status">✓ Resume uploaded</p>
-              )}
-            </div>
-            {uploading && <p className="uploading">Parsing resume...</p>}
-          </div>
-        </section>
-
         {/* Personal Details */}
         <section className="form-section">
           <h2>Personal Details</h2>
@@ -383,6 +388,73 @@ export default function Profile() {
               <button type="button" className="btn-edit" onClick={() => setIsEditing(true)}>
                 Edit Profile
               </button>
+            </div>
+          )}
+        </section>
+
+        {/* Resume Section */}
+        <section className="resume-section">
+          <h2>Resume</h2>
+          
+          {/* Resume Viewer */}
+          {getResumeDownloadUrlQuery && (
+            <div className="resume-viewer">
+              <h3>Current Resume</h3>
+              <iframe
+                src={getResumeDownloadUrlQuery}
+                title="Resume Viewer"
+                className="resume-iframe"
+                style={{
+                  width: '100%',
+                  height: '500px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  marginBottom: '20px',
+                }}
+              />
+              <a
+                href={getResumeDownloadUrlQuery}
+                download
+                className="btn-download"
+                style={{
+                  display: 'inline-block',
+                  padding: '10px 16px',
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  textDecoration: 'none',
+                  borderRadius: '4px',
+                  marginBottom: '20px',
+                  cursor: 'pointer',
+                }}
+              >
+                Download Resume
+              </a>
+            </div>
+          )}
+          
+          {isEditing && (
+            <div className="resume-upload">
+              <div className="upload-area">
+                <Upload size={32} />
+                <h3>Upload Your Resume</h3>
+                <p>PDF, DOC, or DOCX format (Max 5MB)</p>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleResumeUpload}
+                  disabled={uploading}
+                  className="file-input"
+                />
+                {resumeFile && (
+                  <p className="file-info">
+                    Selected: <strong>{resumeFile.name}</strong>
+                  </p>
+                )}
+                {userProfile?.resumeUrl && (
+                  <p className="resume-status">✓ Resume uploaded</p>
+                )}
+              </div>
+              {uploading && <p className="uploading">Parsing resume...</p>}
             </div>
           )}
         </section>

@@ -54,6 +54,7 @@ users: defineTable({
     email: v.string(),
     name: v.string(),
     resumeText: v.optional(v.string()),
+    resumeFileId: v.optional(v.id("_storage")),
     identity: v.optional(
       v.object({
         skills: v.array(v.string()),
