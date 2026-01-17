@@ -1,70 +1,49 @@
-# Getting Started with Create React App
+# Welcome to your Convex + React (Vite) + Clerkapp
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This is a [Convex](https://convex.dev/) project created with [`npm create convex`](https://www.npmjs.com/package/create-convex).
 
-## Available Scripts
+After the initial setup (<2 minutes) you'll have a working full-stack app using:
 
-In the project directory, you can run:
+- Convex as your backend (database, server logic)
+- [React](https://react.dev/) as your frontend (web page interactivity)
+- [Vite](https://vitest.dev/) for optimized web hosting
+- [Tailwind](https://tailwindcss.com/) for building great looking accessible UI
+- [Clerk](https://clerk.com/) for authentication
 
-### `npm start`
+## Get started
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+If you just cloned this codebase and didn't use `npm create convex`, run:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```
+npm install
+npm run dev
+```
 
-### `npm test`
+If you're reading this README on GitHub and want to use this template, run:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```
+npm create convex@latest -- -t react-vite-clerk
+```
 
-### `npm run build`
+Then:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Follow steps 1 to 3 in the [Clerk onboarding guide](https://docs.convex.dev/auth/clerk#get-started)
+2. Paste the Issuer URL as `CLERK_JWT_ISSUER_DOMAIN` to your dev deployment environment variable settings on the Convex dashboard (see [docs](https://docs.convex.dev/auth/clerk#configuring-dev-and-prod-instances))
+3. Paste your publishable key as `VITE_CLERK_PUBLISHABLE_KEY="<your publishable key>"` to the `.env.local` file in this directory.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+If you want to sync Clerk user data via webhooks, check out this [example repo](https://github.com/thomasballinger/convex-clerk-users-table/).
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Learn more
 
-### `npm run eject`
+To learn more about developing your project with Convex, check out:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- The [Tour of Convex](https://docs.convex.dev/get-started) for a thorough introduction to Convex principles.
+- The rest of [Convex docs](https://docs.convex.dev/) to learn about all Convex features.
+- [Stack](https://stack.convex.dev/) for in-depth articles on advanced topics.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Join the community
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Join thousands of developers building full-stack apps with Convex:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Join the [Convex Discord community](https://convex.dev/community) to get help in real-time.
+- Follow [Convex on GitHub](https://github.com/get-convex/), star and contribute to the open-source implementation of Convex.
