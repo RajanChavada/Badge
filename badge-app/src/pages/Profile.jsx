@@ -622,6 +622,37 @@ export default function Profile() {
             </div>
           )}
         </section>
+
+        {/* Resume Section */}
+        <section className="resume-section">
+          <h2>Resume</h2>
+          
+          {isEditing && (
+            <div className="resume-upload">
+              <div className="upload-area">
+                <Upload size={32} />
+                <h3>Upload Your Resume</h3>
+                <p>PDF, DOC, or DOCX format (Max 5MB)</p>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={handleResumeUpload}
+                  disabled={uploading}
+                  className="file-input"
+                />
+                {resumeFile && (
+                  <p className="file-info">
+                    Selected: <strong>{resumeFile.name}</strong>
+                  </p>
+                )}
+                {userProfile?.resumeUrl && (
+                  <p className="resume-status">✓ Resume uploaded</p>
+                )}
+              </div>
+              {uploading && <p className="uploading">Parsing resume...</p>}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   )
