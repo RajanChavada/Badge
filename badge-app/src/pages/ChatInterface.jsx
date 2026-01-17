@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Mic, MicOff, Volume2, VolumeX, Plus } from 'lucide-react'
-import { useAppStore } from '../store/useAppStore.js'
+import useAppStore from '../store/useAppStore.js'
 import './ChatInterface.css'
 
 export default function ChatInterface() {

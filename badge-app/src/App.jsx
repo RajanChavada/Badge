@@ -1,13 +1,21 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react'
-import Navigation from './components/Navigation.js'
+import { useEffect } from 'react'
+import Navigation from './components/Navigation.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Profile from './pages/Profile.jsx'
 import Map from './pages/Map.jsx'
 import ChatInterface from './pages/ChatInterface.jsx'
+import useAppStore from './store/useAppStore.js'
 import './App.css'
 
 function App() {
+  const darkMode = useAppStore(state => state.darkMode)
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
+  }, [darkMode])
+
   return (
     <Router>
       <SignedOut>
