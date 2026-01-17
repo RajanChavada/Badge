@@ -4,7 +4,7 @@ import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
 import "./index.css";
-import App from "./App.js";
+import App from "./App.jsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);

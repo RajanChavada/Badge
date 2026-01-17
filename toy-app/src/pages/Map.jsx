@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useAppStore } from '../store/useAppStore'
+import { useAppStore } from '../store/useAppStore.js'
 import { MapPin, Search, Filter } from 'lucide-react'
-import type { Booth } from '../types'
 import './Map.css'
 
 // Mock data for booths - replace with Convex data
-const MOCK_BOOTHS: Booth[] = [
+const MOCK_BOOTHS = [
   {
     id: '1',
     name: 'Google Booth',
@@ -68,8 +67,8 @@ const MOCK_BOOTHS: Booth[] = [
 export default function Map() {
   const { booths, selectedBooth, setBooths, setSelectedBooth } = useAppStore()
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedTag, setSelectedTag] = useState<string | null>(null)
-  const [filteredBooths, setFilteredBooths] = useState<Booth[]>([])
+  const [selectedTag, setSelectedTag] = useState(null)
+  const [filteredBooths, setFilteredBooths] = useState([])
 
   useEffect(() => {
     // TODO: Fetch booths from Convex backend
@@ -97,13 +96,13 @@ export default function Map() {
 
   const allTags = Array.from(new Set(booths.flatMap((b) => b.tags)))
 
-  const handleBoothClick = (booth: Booth) => {
+  const handleBoothClick = (booth) => {
     setSelectedBooth(booth)
     // TODO: Track booth visit with Amplitude
     // Start tracking time spent at booth
   }
 
-  const handleGeneratePersonalizedSummary = (booth: Booth) => {
+  const handleGeneratePersonalizedSummary = (booth) => {
     // TODO: Call AI service to generate personalized booth summary
     // based on user's resume, interests, and target roles
     console.log('Generate summary for booth:', booth.id)
