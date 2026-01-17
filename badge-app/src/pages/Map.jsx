@@ -1,64 +1,87 @@
 import { useState, useEffect } from 'react'
 import { useAppStore } from '../store/useAppStore.js'
-import { MapPin, Search, Filter } from 'lucide-react'
+import { MapPin, Search, Filter, Loader } from 'lucide-react'
 import './Map.css'
 
-// Mock data for booths - replace with Convex data
-const MOCK_BOOTHS = [
+// Floor map booths with pixel coordinates relative to the floor image
+const FLOOR_MAP_BOOTHS = [
   {
     id: '1',
-    name: 'Google Booth',
+    name: 'Google Sponsor Booth',
     companyName: 'Google',
-    description: 'Search & Advertising platform',
-    latitude: 40.7128,
-    longitude: -74.006,
+    description: '<to be filled later>',
+    x: 150,
+    y: 200,
     tags: ['AI/ML', 'Cloud', 'Web Dev'],
+    talkingPoints: '<to be filled later>',
     keyPeople: [
       {
         id: 'p1',
-        name: 'Sarah Chen',
-        role: 'Engineering Manager',
+        name: 'To be announced',
+        role: 'TBA',
         company: 'Google',
-        bio: 'Leading ML infrastructure team',
-        expertise: ['ML', 'System Design', 'Leadership'],
+        bio: 'Connect with us at the booth',
+        expertise: ['AI/ML', 'Cloud', 'Web Dev'],
       },
     ],
   },
   {
     id: '2',
-    name: 'Microsoft Booth',
-    companyName: 'Microsoft',
-    description: 'Cloud & Enterprise Solutions',
-    latitude: 40.715,
-    longitude: -74.008,
-    tags: ['Cloud', 'Enterprise', 'Security'],
+    name: 'Shopify Booth',
+    companyName: 'Shopify',
+    description: '<to be filled later>',
+    x: 400,
+    y: 150,
+    tags: ['E-Commerce', 'Web Dev', 'Payments'],
+    talkingPoints: '<to be filled later>',
     keyPeople: [
       {
         id: 'p2',
-        name: 'James Wilson',
-        role: 'Senior Developer',
-        company: 'Microsoft',
-        bio: 'Azure cloud architect',
-        expertise: ['Cloud Architecture', 'DevOps', 'Security'],
+        name: 'To be announced',
+        role: 'TBA',
+        company: 'Shopify',
+        bio: 'Connect with us at the booth',
+        expertise: ['E-Commerce', 'Web Dev', 'Payments'],
       },
     ],
   },
   {
     id: '3',
-    name: 'Meta Booth',
-    companyName: 'Meta',
-    description: 'Social & VR Innovation',
-    latitude: 40.71,
-    longitude: -74.004,
-    tags: ['Web Dev', 'VR/AR', 'Mobile Dev'],
+    name: 'Amplitude Booth',
+    companyName: 'Amplitude',
+    description: '<to be filled later>',
+    x: 300,
+    y: 350,
+    tags: ['Analytics', 'Data Science', 'Product'],
+    talkingPoints: '<to be filled later>',
     keyPeople: [
       {
         id: 'p3',
-        name: 'Emma Rodriguez',
-        role: 'Product Manager',
-        company: 'Meta',
-        bio: 'Building next-gen social experiences',
-        expertise: ['Product', 'UX', 'Community'],
+        name: 'To be announced',
+        role: 'TBA',
+        company: 'Amplitude',
+        bio: 'Connect with us at the booth',
+        expertise: ['Analytics', 'Data Science', 'Product'],
+      },
+    ],
+  },
+  {
+    id: '4',
+    name: 'Foresters Financial Booth',
+    companyName: 'Foresters Financial',
+    description: '<to be filled later>',
+    x: 550,
+    y: 280,
+    tags: ['Finance', 'Insurance', 'Actuarial'],
+    talkingPoints: '<to be filled later>',
+    keyPeople: [
+      {
+        id: 'p4',
+        name: 'To be announced',
+        role: 'TBA',
+        company: 'Foresters Financial',
+        bio: 'Connect with us at the booth',
+        expertise: ['Finance', 'Insurance', 'Actuarial'],
       },
     ],
   },
@@ -69,13 +92,154 @@ export default function Map() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTag, setSelectedTag] = useState(null)
   const [filteredBooths, setFilteredBooths] = useState([])
+  const [userLocation, setUserLocation] = useState(null)
+  const [locationLoading, setLocationLoading] = useState(true)
+  const [locationError, setLocationError] = useState(null)
+  const [mapDimensions, setMapDimensions] = useState({ width: 0, height: 0 })
+  const [userMapPosition, setUserMapPosition] = useState({ x: 0, y: 0 })
 
+  // Initialize booths from floor map data
   useEffect(() => {
-    // TODO: Fetch booths from Convex backend
-    // Include geolocation tracking with Amplitude
-    setBooths(MOCK_BOOTHS)
+    setBooths(FLOOR_MAP_BOOTHS)
   }, [setBooths])
 
+  // Get map dimensions on image load and set initial user position to center
+  useEffect(() => {
+    const floorImage = document.querySelector('.floor-image')
+    
+    if (floorImage) {
+      const updateMapDimensions = () => {
+        const width = floorImage.naturalWidth
+        const height = floorImage.naturalHeight
+        setMapDimensions({ width, height })
+        // Initialize user at center of map
+        setUserMapPosition({ x: width / 2, y: height / 2 })
+      }
+      
+      if (floorImage.complete) {
+        updateMapDimensions()
+      } else {
+        floorImage.onload = updateMapDimensions
+      }
+    }
+  }, [])
+
+  // Live tracking of user movement through geolocation
+  // Simulates movement within lecture hall-sized space (approximately 50m x 30m)
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      // Request user's initial location
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude, accuracy } = position.coords
+          const locationData = {
+            latitude,
+            longitude,
+            accuracy,
+            timestamp: new Date().toISOString(),
+            floor: 'Career Fair Floor',
+          }
+          setUserLocation(locationData)
+          setLocationLoading(false)
+          
+          // Convert GPS to map position (simulated for lecture hall)
+          updateUserMapPosition(latitude, longitude)
+          
+          // Log to Amplitude
+          if (window.amplitude) {
+            window.amplitude.getInstance().logEvent('map_page_loaded', {
+              ...locationData,
+              event_type: 'geolocation_initial_detection',
+            })
+          }
+        },
+        (error) => {
+          setLocationError(error.message)
+          setLocationLoading(false)
+          console.warn('Geolocation error:', error)
+          
+          if (window.amplitude) {
+            window.amplitude.getInstance().logEvent('geolocation_error', {
+              error_code: error.code,
+              error_message: error.message,
+              timestamp: new Date().toISOString(),
+            })
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0,
+        }
+      )
+
+      // Watch user location for live tracking - updates every 3 seconds
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude, accuracy } = position.coords
+          const locationData = {
+            latitude,
+            longitude,
+            accuracy,
+            timestamp: new Date().toISOString(),
+            floor: 'Career Fair Floor',
+          }
+          setUserLocation(locationData)
+          
+          // Update user position on map based on GPS movement
+          updateUserMapPosition(latitude, longitude)
+          
+          // Log to Amplitude
+          if (window.amplitude) {
+            window.amplitude.getInstance().logEvent('user_location_updated', {
+              latitude,
+              longitude,
+              accuracy,
+              map_position: { x: userMapPosition.x, y: userMapPosition.y },
+              timestamp: new Date().toISOString(),
+              event_type: 'geolocation_live_tracking',
+            })
+          }
+        },
+        (error) => {
+          console.warn('Watch position error:', error)
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 5000,
+          maximumAge: 3000, // Update every 3 seconds max
+        }
+      )
+
+      return () => navigator.geolocation.clearWatch(watchId)
+    } else {
+      setLocationError('Geolocation is not supported by your browser')
+      setLocationLoading(false)
+    }
+  }, [userMapPosition])
+
+  // Convert GPS coordinates to map pixel position
+  // Simulates a lecture hall: ~50m x 30m (typical lecture hall dimensions)
+  const updateUserMapPosition = (latitude, longitude) => {
+    if (mapDimensions.width === 0 || mapDimensions.height === 0) return
+
+    // Simulate GPS-to-map conversion (assuming GPS coordinates vary within hall bounds)
+    // For demo: use small variation to simulate movement within lecture hall
+    const latVariation = latitude % 0.001 // Small decimal fraction
+    const lonVariation = longitude % 0.001
+    
+    // Map GPS variation to pixel coordinates within the map
+    // Lecture hall ~50m x 30m, assuming map proportions similar
+    const mapX = (latVariation / 0.001) * (mapDimensions.width * 0.8) + mapDimensions.width * 0.1
+    const mapY = (lonVariation / 0.001) * (mapDimensions.height * 0.8) + mapDimensions.height * 0.1
+    
+    setUserMapPosition({
+      x: Math.max(0, Math.min(mapX, mapDimensions.width)),
+      y: Math.max(0, Math.min(mapY, mapDimensions.height)),
+    })
+  }
+
+  // Filter booths based on search and tag
   useEffect(() => {
     let filtered = booths
 
@@ -98,13 +262,21 @@ export default function Map() {
 
   const handleBoothClick = (booth) => {
     setSelectedBooth(booth)
-    // TODO: Track booth visit with Amplitude
-    // Start tracking time spent at booth
+    
+    // Track booth visit with Amplitude
+    if (window.amplitude) {
+      window.amplitude.getInstance().logEvent('booth_clicked', {
+        booth_id: booth.id,
+        booth_name: booth.name,
+        company_name: booth.companyName,
+        user_location: userLocation,
+        user_map_position: userMapPosition,
+        timestamp: new Date().toISOString(),
+      })
+    }
   }
 
   const handleGeneratePersonalizedSummary = (booth) => {
-    // TODO: Call AI service to generate personalized booth summary
-    // based on user's resume, interests, and target roles
     console.log('Generate summary for booth:', booth.id)
   }
 
@@ -119,65 +291,45 @@ export default function Map() {
         {/* Map View */}
         <div className="map-view">
           <div className="map-canvas">
-            <svg viewBox="0 0 800 600" className="map-svg">
-              {/* Simple SVG map background */}
-              <rect width="800" height="600" fill="#e8f4f8" />
-              <g className="grid" opacity="0.1">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <line
-                    key={`h${i}`}
-                    x1="0"
-                    y1={i * 75}
-                    x2="800"
-                    y2={i * 75}
-                    stroke="#999"
-                  />
-                ))}
-                {Array.from({ length: 11 }).map((_, i) => (
-                  <line
-                    key={`v${i}`}
-                    x1={i * 80}
-                    y1="0"
-                    x2={i * 80}
-                    y2="600"
-                    stroke="#999"
-                  />
-                ))}
-              </g>
+            {/* Floor image background */}
+            <div className="floor-image-container">
+              <img 
+                src="/floor-map.jpg" 
+                alt="Career Fair Floor Map" 
+                className="floor-image"
+              />
+              
+              {/* User location indicator - live tracking */}
+              <div 
+                className="user-location-indicator"
+                style={{
+                  left: `${userMapPosition.x}px`,
+                  top: `${userMapPosition.y}px`,
+                }}
+                title={`You are here (accuracy: ${userLocation ? Math.round(userLocation.accuracy) : '?'}m)`}
+              >
+                <div className="location-pulse"></div>
+              </div>
 
-              {/* Plot booth markers */}
-              {filteredBooths.map((booth, index) => {
-                const x = (booth.longitude + 74.01) * 100000 % 800
-                const y = (booth.latitude - 40.71) * 100000 % 600
-                return (
-                  <g key={booth.id}>
-                    <circle
-                      cx={x}
-                      cy={y}
-                      r="20"
-                      fill={
-                        selectedBooth?.id === booth.id ? '#667eea' : '#764ba2'
-                      }
-                      opacity="0.8"
-                      className="booth-marker"
-                      onClick={() => handleBoothClick(booth)}
-                      style={{ cursor: 'pointer' }}
-                    />
-                    <text
-                      x={x}
-                      y={y}
-                      textAnchor="middle"
-                      dy="0.3em"
-                      fill="white"
-                      fontSize="12"
-                      fontWeight="bold"
-                    >
-                      {index + 1}
-                    </text>
-                  </g>
-                )
-              })}
-            </svg>
+              {/* Booth markers */}
+              {filteredBooths.map((booth, index) => (
+                <div
+                  key={booth.id}
+                  className={`booth-marker-dot ${
+                    selectedBooth?.id === booth.id ? 'selected' : ''
+                  }`}
+                  style={{
+                    left: `${booth.x}px`,
+                    top: `${booth.y}px`,
+                  }}
+                  onClick={() => handleBoothClick(booth)}
+                  title={booth.name}
+                >
+                  <div className="marker-number">{index + 1}</div>
+                  <div className="marker-tooltip">{booth.name}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {selectedBooth && (
@@ -191,6 +343,13 @@ export default function Map() {
               <h2>{selectedBooth.name}</h2>
               <p className="company-name">{selectedBooth.companyName}</p>
               <p className="description">{selectedBooth.description}</p>
+
+              {selectedBooth.talkingPoints && (
+                <div className="talking-points-section">
+                  <h3>Suggested Talking Points</h3>
+                  <p>{selectedBooth.talkingPoints}</p>
+                </div>
+              )}
 
               <div className="tags">
                 {selectedBooth.tags.map((tag) => (
@@ -306,13 +465,35 @@ export default function Map() {
 
           {/* Geolocation & Analytics Info */}
           <div className="analytics-section">
-            <h3>Activity</h3>
-            <p className="analytics-info">
-              📍 Geolocation tracking enabled
-              <br />
-              {/* TODO: Display time spent at each booth */}
-              Time per booth: --
-            </p>
+            <h3>📍 Live Location Tracking</h3>
+            {locationLoading ? (
+              <p className="analytics-info">
+                <Loader size={16} className="spinner" /> Detecting location...
+              </p>
+            ) : locationError ? (
+              <p className="analytics-info error">
+                ❌ {locationError}
+              </p>
+            ) : userLocation ? (
+              <div className="location-info">
+                <p className="analytics-info success">
+                  ✓ Live tracking active
+                </p>
+                <p className="location-details">
+                  Lat: {userLocation.latitude.toFixed(4)}° <br />
+                  Lon: {userLocation.longitude.toFixed(4)}° <br />
+                  Accuracy: {Math.round(userLocation.accuracy)}m
+                </p>
+                <p className="location-details" style={{ fontSize: '12px', color: '#888' }}>
+                  Map Position: <br />
+                  X: {Math.round(userMapPosition.x)}px <br />
+                  Y: {Math.round(userMapPosition.y)}px
+                </p>
+                <p className="location-note">
+                  Live tracking enabled. Moving within lecture hall-sized venue.
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

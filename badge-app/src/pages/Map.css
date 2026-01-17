@@ -1,3 +1,5 @@
+/* Full Map Layout with Sidebar */
+
 .map-page {
   padding: 2rem;
   max-width: 1600px;
@@ -46,26 +48,162 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #e8f4f8 0%, #f0f4f8 100%);
+  position: relative;
+  overflow: hidden;
 }
 
-.map-svg {
+.floor-image-container {
+  position: relative;
   width: 100%;
   height: 100%;
-  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.map-svg:active {
-  cursor: grabbing;
+.floor-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 0.5rem;
 }
 
-.booth-marker {
+/* Booth marker styling - purple numbered circles */
+.booth-marker-dot {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
   transition: all 0.3s ease;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+  border: 3px solid white;
+  transform: translate(-50%, -50%);
+  z-index: 5;
 }
 
-.booth-marker:hover {
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.25));
-  r: 24;
+.booth-marker-dot:hover {
+  width: 48px;
+  height: 48px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.booth-marker-dot.selected {
+  width: 48px;
+  height: 48px;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.marker-number {
+  color: white;
+  font-weight: bold;
+  font-size: 1rem;
+  text-align: center;
+  line-height: 1;
+}
+
+.marker-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  margin-bottom: 0.5rem;
+}
+
+.booth-marker-dot:hover .marker-tooltip {
+  opacity: 1;
+}
+
+/* User location indicator - live tracking with red dot */
+.user-location-indicator {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  z-index: 10;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.location-pulse {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #ff6b6b;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.2);
+  animation: pulse 2s infinite;
+}
+
+.location-pulse::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border-radius: 50%;
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 107, 107, 0.1);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* Talking points section in details popup */
+.talking-points-section {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #f0f4f8;
+  border-left: 3px solid #667eea;
+  border-radius: 0.25rem;
+}
+
+.talking-points-section h3 {
+  font-size: 0.85rem;
+  color: #333;
+  margin: 0 0 0.5rem 0;
+  font-weight: 700;
+}
+
+.talking-points-section p {
+  color: #666;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
 }
 
 .booth-details-popup {
@@ -383,6 +521,56 @@
   color: #666;
   font-size: 0.9rem;
   line-height: 1.6;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.analytics-info.success {
+  color: #27ae60;
+  font-weight: 600;
+}
+
+.analytics-info.error {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.analytics-info .spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.location-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.location-details {
+  background: #f0f4f8;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.6;
+  margin: 0;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.location-note {
+  color: #999;
+  font-size: 0.75rem;
+  font-style: italic;
   margin: 0;
 }
 
