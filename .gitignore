@@ -23,3 +23,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+badge-app/convex.json
+badge-app/package-lock.json
+badge-app/convex/_generated/api.d.ts
+badge-app/convex/_generated/api.js
+badge-app/convex/_generated/dataModel.d.ts
+badge-app/convex/_generated/server.d.ts
+badge-app/convex/_generated/server.js
