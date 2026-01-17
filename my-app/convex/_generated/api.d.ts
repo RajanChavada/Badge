@@ -8,7 +8,11 @@
  * @module
  */
 
+import type * as interactions from "../interactions.js";
+import type * as llm from "../llm.js";
 import type * as myFunctions from "../myFunctions.js";
+import type * as speechToText from "../speechToText.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -17,7 +21,11 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  interactions: typeof interactions;
+  llm: typeof llm;
   myFunctions: typeof myFunctions;
+  speechToText: typeof speechToText;
+  users: typeof users;
 }>;
 
 /**
