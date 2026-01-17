@@ -1,21 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Mic, MicOff, Volume2, VolumeX, Plus } from 'lucide-react'
-import { useAppStore } from '../store/useAppStore'
-import type { ChatMessage, ChatSession } from '../types'
+import { useAppStore } from '../store/useAppStore.js'
 import './ChatInterface.css'
 
 export default function ChatInterface() {
   const { userProfile } = useAppStore()
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
-  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null)
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [chatSessions, setChatSessions] = useState([])
+  const [selectedSession, setSelectedSession] = useState(null)
+  const [messages, setMessages] = useState([])
   const [inputMessage, setInputMessage] = useState('')
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
+  const messagesEndRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef = useRef([])
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -55,7 +54,7 @@ export default function ChatInterface() {
     }
   }
 
-  const handleAudioInput = async (audioBlob: Blob) => {
+  const handleAudioInput = async (audioBlob) => {
     // TODO: Call speech-to-text AI service
     // Convert audio to text
     console.log('Audio input received:', audioBlob)
@@ -64,7 +63,7 @@ export default function ChatInterface() {
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !selectedSession) return
 
-    const newMessage: ChatMessage = {
+    const newMessage = {
       id: `msg-${Date.now()}`,
       sender: 'user',
       content: inputMessage,
@@ -79,7 +78,7 @@ export default function ChatInterface() {
     // Use user profile, booth/person info, and conversation history
     // to generate personalized response
     setTimeout(() => {
-      const aiResponse: ChatMessage = {
+      const aiResponse = {
         id: `msg-${Date.now() + 1}`,
         sender: 'ai',
         content: `Thanks for sharing that! [AI-generated response based on your conversation with ${
@@ -101,10 +100,10 @@ export default function ChatInterface() {
     setTimeout(() => setIsSpeaking(false), 2000)
   }
 
-  const createNewSession = (sessionType: 'practice' | 'exploration') => {
+  const createNewSession = (sessionType) => {
     // TODO: Create new chat session
     // Allow user to select booth or person to practice with
-    const newSession: ChatSession = {
+    const newSession = {
       id: `session-${Date.now()}`,
       userId: userProfile?.userId || '',
       targetPerson: {
@@ -172,7 +171,7 @@ export default function ChatInterface() {
                         : '🔍 Explore'}
                     </div>
                     <div className="session-target">
-                      {(session.targetPerson as any).name || 'Chat'}
+                      {(session.targetPerson).name || 'Chat'}
                     </div>
                     <div className="session-time">
                       {new Date(session.startTime).toLocaleTimeString()}
@@ -212,7 +211,7 @@ export default function ChatInterface() {
                 </h2>
                 <p>
                   with{' '}
-                  {((selectedSession.targetPerson as any).name) || 'AI'}
+                  {((selectedSession.targetPerson).name) || 'AI'}
                 </p>
               </div>
               <div className="session-badge">

@@ -5,8 +5,6 @@
  * TODO: Implement these functions with actual Convex backend calls
  */
 
-import type { UserProfile, Booth, ChatMessage, ChatSession, BoothVisit } from '../types'
-
 // ===== USER PROFILE API =====
 
 /**
@@ -15,28 +13,25 @@ import type { UserProfile, Booth, ChatMessage, ChatSession, BoothVisit } from '.
  * - Store resume if provided
  * - Initialize user analytics tracking
  */
-export const createUserProfile = async (userId: string, profileData: any): Promise<UserProfile> => {
+export const createUserProfile = async (userId, profileData) => {
   // const mutation = useMutation(api.users.createProfile)
   // return await mutation({ userId, ...profileData })
   console.log('Creating user profile:', { userId, profileData })
-  return {} as UserProfile
+  return {}
 }
 
 /**
  * TODO: Update existing user profile
  */
-export const updateUserProfile = async (
-  userId: string,
-  profileData: Partial<UserProfile>
-): Promise<UserProfile> => {
+export const updateUserProfile = async (userId, profileData) => {
   console.log('Updating user profile:', { userId, profileData })
-  return {} as UserProfile
+  return {}
 }
 
 /**
  * TODO: Fetch user profile from Convex
  */
-export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
+export const getUserProfile = async (userId) => {
   console.log('Fetching user profile:', userId)
   return null
 }
@@ -53,7 +48,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
  *   - Education
  *   - Keywords
  */
-export const parseResume = async (resumeFile: File): Promise<any> => {
+export const parseResume = async (resumeFile) => {
   console.log('Parsing resume:', resumeFile.name)
   // TODO: Implement resume parsing with AI service
   return {}
@@ -62,7 +57,7 @@ export const parseResume = async (resumeFile: File): Promise<any> => {
 /**
  * TODO: Upload resume to Convex storage
  */
-export const uploadResume = async (_userId: string, file: File): Promise<string> => {
+export const uploadResume = async (_userId, file) => {
   console.log('Uploading resume:', file.name)
   // TODO: Upload to Convex storage and return URL
   return ''
@@ -75,7 +70,7 @@ export const uploadResume = async (_userId: string, file: File): Promise<string>
  * - Include booth details, locations, key people
  * - Include tags/interests
  */
-export const fetchBooths = async (): Promise<Booth[]> => {
+export const fetchBooths = async () => {
   console.log('Fetching booths...')
   return []
 }
@@ -86,10 +81,7 @@ export const fetchBooths = async (): Promise<Booth[]> => {
  * - Match skills to booth expertise
  * - Create personalized introduction
  */
-export const generateBoothSummary = async (
-  userId: string,
-  boothId: string
-): Promise<string> => {
+export const generateBoothSummary = async (userId, boothId) => {
   console.log('Generating booth summary:', { userId, boothId })
   // TODO: Call AI service to generate personalized summary
   return 'Generated summary'
@@ -103,7 +95,7 @@ export const generateBoothSummary = async (
  * - Track duration
  * - Send to Amplitude for analytics
  */
-export const trackBoothVisit = async (visit: BoothVisit): Promise<void> => {
+export const trackBoothVisit = async (visit) => {
   console.log('Tracking booth visit:', visit)
   // TODO: Call Amplitude API with event data
 }
@@ -114,7 +106,7 @@ export const trackBoothVisit = async (visit: BoothVisit): Promise<void> => {
  * - Based on booth visit history (time spent)
  * - Based on user interests and target sectors
  */
-export const getPersonalizedRecommendations = async (userId: string): Promise<Booth[]> => {
+export const getPersonalizedRecommendations = async (userId) => {
   console.log('Getting recommendations for user:', userId)
   // TODO: Call recommendation AI service
   return []
@@ -125,12 +117,9 @@ export const getPersonalizedRecommendations = async (userId: string): Promise<Bo
 /**
  * TODO: Create new chat session
  */
-export const createChatSession = async (
-  _userId: string,
-  sessionData: Partial<ChatSession>
-): Promise<ChatSession> => {
+export const createChatSession = async (_userId, sessionData) => {
   console.log('Creating chat session:', sessionData)
-  return {} as ChatSession
+  return {}
 }
 
 /**
@@ -140,11 +129,11 @@ export const createChatSession = async (
  * - Consider target person/booth context
  */
 export const generateAIResponse = async (
-  _userId: string,
-  _sessionId: string,
-  userMessage: string,
-  _context?: any
-): Promise<ChatMessage> => {
+  _userId,
+  _sessionId,
+  userMessage,
+  _context
+) => {
   console.log('Generating AI response:', { userMessage })
   // TODO: Call OpenAI or similar service with context
   // Include: conversation history, user resume, booth/person info
@@ -161,7 +150,7 @@ export const generateAIResponse = async (
  * - Take audio blob
  * - Convert to text using speech recognition service
  */
-export const convertSpeechToText = async (_audioBlob: Blob): Promise<string> => {
+export const convertSpeechToText = async (_audioBlob) => {
   console.log('Converting speech to text...')
   // TODO: Call Whisper API or similar speech-to-text service
   return 'Transcribed text'
@@ -173,7 +162,7 @@ export const convertSpeechToText = async (_audioBlob: Blob): Promise<string> => 
  * - Generate natural audio response
  * - Return audio blob or URL
  */
-export const convertTextToSpeech = async (_text: string): Promise<Blob> => {
+export const convertTextToSpeech = async (_text) => {
   console.log('Converting text to speech...')
   // TODO: Call text-to-speech service (e.g., Google TTS, Azure TTS)
   return new Blob()
@@ -182,10 +171,7 @@ export const convertTextToSpeech = async (_text: string): Promise<Blob> => {
 /**
  * TODO: Save chat session
  */
-export const saveChatSession = async (
-  _userId: string,
-  session: ChatSession
-): Promise<ChatSession> => {
+export const saveChatSession = async (_userId, session) => {
   console.log('Saving chat session:', session.id)
   return session
 }
@@ -197,10 +183,7 @@ export const saveChatSession = async (
  * - Request geolocation permission
  * - Return lat/lng
  */
-export const getUserLocation = async (): Promise<{
-  latitude: number
-  longitude: number
-}> => {
+export const getUserLocation = async () => {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -220,10 +203,7 @@ export const getUserLocation = async (): Promise<{
  * - Calculate proximity to booths
  * - Trigger automatic booth tracking
  */
-export const startGeolocationTracking = async (
-  userId: string,
-  boothId: string
-): Promise<void> => {
+export const startGeolocationTracking = async (userId, boothId) => {
   console.log('Starting geolocation tracking:', { userId, boothId })
   // TODO: Set up periodic location tracking with Amplitude
 }
@@ -233,17 +213,14 @@ export const startGeolocationTracking = async (
 /**
  * TODO: Create connection/follow relationship
  */
-export const createConnection = async (
-  userId: string,
-  targetPersonId: string
-): Promise<void> => {
+export const createConnection = async (userId, targetPersonId) => {
   console.log('Creating connection:', { userId, targetPersonId })
 }
 
 /**
  * TODO: Get user's connections
  */
-export const getUserConnections = async (_userId: string): Promise<any[]> => {
+export const getUserConnections = async (_userId) => {
   console.log('Fetching user connections...')
   return []
 }

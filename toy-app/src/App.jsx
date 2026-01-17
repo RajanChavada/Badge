@@ -1,10 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react'
-import Navigation from './components/Navigation'
-import Dashboard from './pages/Dashboard'
-import Profile from './pages/Profile'
-import Map from './pages/Map'
-import ChatInterface from './pages/ChatInterface'
+import Navigation from './components/Navigation.js'
+import Dashboard from './pages/Dashboard.jsx'
+import Profile from './pages/Profile.jsx'
+import Map from './pages/Map.jsx'
+import ChatInterface from './pages/ChatInterface.jsx'
 import './App.css'
 
 function App() {

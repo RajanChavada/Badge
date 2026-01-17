@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
-import { useAppStore } from '../store/useAppStore'
+import { useAppStore } from '../store/useAppStore.js'
 import { BarChart3, TrendingUp, Users, Target } from 'lucide-react'
 import './Dashboard.css'
 

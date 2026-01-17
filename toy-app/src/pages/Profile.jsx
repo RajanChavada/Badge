@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
-import { useAppStore } from '../store/useAppStore'
+import { useAppStore } from '../store/useAppStore.js'
 import { Upload, Save } from 'lucide-react'
-import type { ProfileFormData } from '../types'
 import './Profile.css'
 
 const INTERESTS = ['AI/ML', 'Web Dev', 'Mobile Dev', 'Cloud', 'Data Science', 'DevOps', 'Security', 'Product']
@@ -13,7 +12,7 @@ export default function Profile() {
   const { user } = useUser()
   const { userProfile, setUserProfile } = useAppStore()
   const [isEditing, setIsEditing] = useState(!userProfile)
-  const [formData, setFormData] = useState<ProfileFormData>(
+  const [formData, setFormData] = useState(
     userProfile
       ? {
           name: userProfile.name,
@@ -34,18 +33,15 @@ export default function Profile() {
           targetRoles: [],
         }
   )
-  const [resumeFile, setResumeFile] = useState<File | null>(null)
+  const [resumeFile, setResumeFile] = useState(null)
   const [uploading, setUploading] = useState(false)
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData({ ...formData, [name]: value })
   }
 
-  const handleMultiSelect = (
-    field: 'interests' | 'targetSectors' | 'targetRoles',
-    value: string
-  ) => {
+  const handleMultiSelect = (field, value) => {
     setFormData((prev) => ({
       ...prev,
       [field]: prev[field].includes(value)
@@ -54,7 +50,7 @@ export default function Profile() {
     }))
   }
 
-  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleResumeUpload = async (e) => {
     const file = e.target.files?.[0]
     if (file) {
       setResumeFile(file)
