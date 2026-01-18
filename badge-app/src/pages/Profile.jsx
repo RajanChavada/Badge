@@ -17,6 +17,7 @@ const LOOKING_FOR = ['Internship', 'Full-time', 'Co-op', 'Part-time', 'Mentorshi
 export default function Profile() {
   const { user } = useUser()
   const parseResumeAction = useAction(api.resumeParser.parseResume)
+  const vectorizeAction = useAction(api.users.vectorizeProfileInSnowflake)
   const getProfileQuery = useQuery(api.users.getProfile, user?.id ? { clerkId: user.id } : 'skip')
   const upsertProfileMutation = useMutation(api.users.upsertProfile)
   const { userProfile, setUserProfile } = useAppStore()
@@ -133,21 +134,36 @@ export default function Profile() {
 
       if (result.success && result.identity) {
         setParsedIdentity(result.identity)
-        setFormData(prev => ({
-          ...prev,
-          headline: result.identity.headline || prev.headline,
-          summary: result.identity.summary || prev.summary,
-          education: result.identity.education || prev.education,
-          experience: result.identity.experience || prev.experience,
-          projects: result.identity.projects || prev.projects,
-          skills: result.identity.skills || prev.skills,
-          technicalSkills: result.identity.technicalSkills || prev.technicalSkills,
-          interests: result.identity.interests || prev.interests,
-          goals: result.identity.goals || prev.goals,
-          targetRoles: result.identity.targetRoles || prev.targetRoles,
-          lookingFor: result.identity.lookingFor || prev.lookingFor,
-        }))
-        setStatus('✅ Resume analyzed!')
+        const updatedFormData = {
+          ...formData,
+          headline: result.identity.headline || formData.headline,
+          summary: result.identity.summary || formData.summary,
+          education: result.identity.education || formData.education,
+          experience: result.identity.experience || formData.experience,
+          projects: result.identity.projects || formData.projects,
+          skills: result.identity.skills || formData.skills,
+          technicalSkills: result.identity.technicalSkills || formData.technicalSkills,
+          interests: result.identity.interests || formData.interests,
+          goals: result.identity.goals || formData.goals,
+          targetRoles: result.identity.targetRoles || formData.targetRoles,
+          lookingFor: result.identity.lookingFor || formData.lookingFor,
+        }
+        setFormData(updatedFormData)
+        
+        setStatus('📊 Vectorizing profile...')
+        try {
+          await vectorizeAction({
+            clerkId: user.id,
+            name: updatedFormData.name || user?.fullName,
+            education: updatedFormData.education.map(e => `${e.degree} in ${e.field} from ${e.institution}`).join('; '),
+            interests: updatedFormData.interests,
+            resumeText: extractedText,
+          })
+          setStatus('✅ Resume analyzed and vectorized!')
+        } catch (vectorErr) {
+          console.error('Vectorization error:', vectorErr)
+          setStatus('✅ Resume analyzed! (vectorization failed)')
+        }
       } else {
         setError(result.error || 'AI parsing failed')
       }
@@ -210,6 +226,16 @@ export default function Profile() {
         identity,
       })
 
+      // Vectorize the profile
+      setStatus('Vectorizing profile...')
+      await vectorizeAction({
+        clerkId: user.id,
+        name: formData.name,
+        education: formData.education.map(e => `${e.degree} in ${e.field} from ${e.institution}`).join('; '),
+        interests: formData.interests,
+        resumeText: extractedResumeText || undefined,
+      })
+
       setUserProfile({ ...formData, identity })
       setStatus('Saved!')
       setTimeout(() => {
@@ -240,7 +266,7 @@ export default function Profile() {
           </div>
 
           <div className="badge-header">
-            Event Attendee 2026
+            UoftHacks 13
           </div>
 
           <div className="badge-content">
