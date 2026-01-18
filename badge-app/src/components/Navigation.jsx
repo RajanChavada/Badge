@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { UserButton } from '@clerk/clerk-react'
-
-import { Home, MapPin, MessageCircle, User, Moon, Sun, Mic } from 'lucide-react'
+import { Home, Zap, MapPin, MessageCircle, User, Moon, Sun, Box, Mic } from 'lucide-react'
 import useAppStore from '../store/useAppStore.js'
 
 import './Navigation.css'
@@ -39,8 +38,8 @@ export default function Navigation() {
             to="/map"
             className={`nav-link ${isActive('/map') ? 'active' : ''}`}
           >
-            <MapPin size={20} />
-            <span>Map</span>
+            <Zap size={20} />
+            <span>Knowledge Graph</span>
           </Link>
           <Link
             to="/chat"
@@ -55,6 +54,13 @@ export default function Navigation() {
           >
             <Mic size={20} />
             <span>Live</span>
+          </Link>
+          <Link
+            to="/vector-3d"
+            className={`nav-link ${isActive('/vector-3d') ? 'active' : ''}`}
+          >
+            <Box size={20} />
+            <span>3D Vectors</span>
           </Link>
         </div>
 
