@@ -78,28 +78,23 @@ export const getProfileVectors = action({
   handler: async (ctx) => {
     const account = process.env.SNOWFLAKE_ACCOUNT
     const user = process.env.SNOWFLAKE_USER
-    const password = process.env.SNOWFLAKE_PASSWORD
     const bearerToken = process.env.SNOWFLAKE_BEARER_TOKEN
     const database = process.env.SNOWFLAKE_DATABASE || 'badge_app'
     const warehouse = process.env.SNOWFLAKE_WAREHOUSE || 'badge_wh'
 
-    if (!account || !user || (!password && !bearerToken)) {
+    if (!account || !user || !bearerToken) {
+      console.error('[Snowflake] Missing credentials (need Bearer token)')
       return { success: false, data: [] }
     }
 
     try {
       const snowflakeUrl = `https://${account}.snowflakecomputing.com/api/v2/statements`
       
+      // Use Bearer token (JWT)
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-      }
-
-      if (bearerToken) {
-        headers['Authorization'] = `Bearer ${bearerToken}`
-        headers['X-Snowflake-Authorization-Token-Type'] = 'KEYPAIR_JWT'
-      } else {
-        const authToken = btoa(`${user}:${password}`)
-        headers['Authorization'] = `Basic ${authToken}`
+        'Authorization': `Bearer ${bearerToken}`,
+        'X-Snowflake-Authorization-Token-Type': 'KEYPAIR_JWT',
       }
 
       const sql = `
@@ -119,7 +114,6 @@ export const getProfileVectors = action({
           warehouse: warehouse,
         }),
       })
-      console.log('[Snowflake] Response: ' + response)
 
       if (!response.ok) {
         const errorText = await response.text()
@@ -128,7 +122,6 @@ export const getProfileVectors = action({
       }
 
       const result = await response.json()
-      console.log('[Snowflake] Data array:', result.data)
       console.log('[Snowflake] Data length:', result.data?.length)
       
       // Parse Snowflake response - data is the array of rows
@@ -140,9 +133,7 @@ export const getProfileVectors = action({
       }> = []
       
       if (result.data && result.data.length > 0) {
-        console.log('[Snowflake] Processing', result.data.length, 'rows')
-        result.data.forEach((row: any, idx: number) => {
-          console.log(`[Snowflake] Row ${idx}:`, row)
+        result.data.forEach((row: any) => {
           const clerkId = row[0]
           const name = row[1]
           const vectorString = row[2]
@@ -152,10 +143,8 @@ export const getProfileVectors = action({
           try {
             vectorArray = JSON.parse(vectorString)
           } catch (e) {
-            console.error(`[Snowflake] Failed to parse vector for row ${idx}:`, e)
+            console.error('[Snowflake] Failed to parse vector:', e)
           }
-          
-          console.log(`[Snowflake] Row ${idx} - clerkId:`, clerkId, 'name:', name, 'vectorLength:', vectorArray.length)
           
           // Extract first 3 coords
           const coords3d = vectorArray && vectorArray.length >= 3 
@@ -169,8 +158,6 @@ export const getProfileVectors = action({
             coords3d,
           })
         })
-      } else {
-        console.log('[Snowflake] No data in response')
       }
 
       console.log('[Snowflake] Parsed profiles:', profiles.length)
