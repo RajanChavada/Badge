@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import * as THREE from 'three';
 import { useNavigate } from 'react-router-dom';
 import { useAction } from 'convex/react';
 import { useUser } from '@clerk/clerk-react';
 import { api } from '../../convex/_generated/api';
+import useAppStore from '../store/useAppStore.js';
 import '../styles/Vector3D.css';
 
 const cosineSimilarity = (a, b) => {
@@ -111,6 +113,7 @@ export default function Vector3D() {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const { user } = useUser();
   const navigate = useNavigate();
+  const { darkMode } = useAppStore();
   const getProfileVectors = useAction(api.users.getProfileVectors);
 
   useEffect(() => {
@@ -138,7 +141,7 @@ export default function Vector3D() {
     };
 
     fetchAndVisualize();
-  }, [getProfileVectors]);
+  }, [getProfileVectors, darkMode]);
 
   const visualize3D = (data) => {
     if (!mountRef.current) return;
@@ -147,7 +150,7 @@ export default function Vector3D() {
 
     // Three.js setup
     const scene = new THREE.Scene();
-    // scene.background = new THREE.Color(0x1a1a1a); // Removed for immersive transparency
+    scene.background = new THREE.Color(darkMode ? 0x0a0a0c : 0xf8f9fa);
 
     const camera = new THREE.PerspectiveCamera(
       75,

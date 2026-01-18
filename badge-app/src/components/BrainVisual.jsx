@@ -6,29 +6,23 @@ export default function BrainVisual({ isRecording = false }) {
     const containerRef = useRef(null)
     const { darkMode } = useAppStore()
 
-    // Core refs to preserve state
-    const sceneRef = useRef(null)
-    const rendererRef = useRef(null)
-    const cameraRef = useRef(null)
-    const objectsRef = useRef({
-        brainGroup: null,
-        sphere: null,
-        innerSphere: null,
-        particles: null
+    // Refs to objects for dynamic updates
+    const stateRef = useRef({
+        brain: null,
+        material: null,
+        dots: null,
+        dotsMat: null,
+        clock: new THREE.Clock(),
+        frameId: null
     })
-    const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 })
-    const animationFrameId = useRef(null)
 
     useEffect(() => {
         if (!containerRef.current) return
 
         // -- Setup --
         const scene = new THREE.Scene()
-        sceneRef.current = scene
-
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-        camera.position.z = 5
-        cameraRef.current = camera
+        camera.position.z = 6 // Slightly further back for better perspective
 
         const renderer = new THREE.WebGLRenderer({
             antialias: true,
@@ -38,129 +32,90 @@ export default function BrainVisual({ isRecording = false }) {
         renderer.setSize(window.innerWidth, window.innerHeight)
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
         containerRef.current.appendChild(renderer.domElement)
-        rendererRef.current = renderer
 
-        // -- Create Brain Visual --
-        const brainGroup = new THREE.Group()
-
-        // Outer Sphere
-        const geometry = new THREE.IcosahedronGeometry(2.5, 3)
+        // -- Create Objects --
+        const geometry = new THREE.IcosahedronGeometry(3.2, 3) // Slightly larger
         const material = new THREE.MeshBasicMaterial({
             color: darkMode ? 0x667eea : 0x4285f4,
             wireframe: true,
             transparent: true,
             opacity: 0.15
         })
-        const sphere = new THREE.Mesh(geometry, material)
+        const brain = new THREE.Mesh(geometry, material)
+        scene.add(brain)
 
-        // Inner Sphere
-        const innerGeom = new THREE.IcosahedronGeometry(1.6, 2)
-        const innerMat = new THREE.MeshBasicMaterial({
-            color: darkMode ? 0x9f7aea : 0x4285f4,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.05
-        })
-        const innerSphere = new THREE.Mesh(innerGeom, innerMat)
-
-        brainGroup.add(sphere)
-        brainGroup.add(innerSphere)
-        scene.add(brainGroup)
-
-        // Particles
-        const partGeom = new THREE.BufferGeometry()
-        const count = 400
-        const posArray = new Float32Array(count * 3)
-        for (let i = 0; i < count * 3; i++) {
-            posArray[i] = (Math.random() - 0.5) * 15
+        // Floating Depth Dots
+        const dotsGeom = new THREE.BufferGeometry()
+        const dotsCount = 400
+        const posArray = new Float32Array(dotsCount * 3)
+        for (let i = 0; i < dotsCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 20
         }
-        partGeom.setAttribute('position', new THREE.BufferAttribute(posArray, 3))
-        const partMat = new THREE.PointsMaterial({
+        dotsGeom.setAttribute('position', new THREE.BufferAttribute(posArray, 3))
+        const dotsMat = new THREE.PointsMaterial({
             size: 0.04,
-            color: darkMode ? 0xffffff : 0x667eea,
+            color: darkMode ? 0x888888 : 0x4285f4,
             transparent: true,
-            opacity: 0.4
+            opacity: 0.3
         })
-        const particles = new THREE.Points(partGeom, partMat)
-        scene.add(particles)
+        const dots = new THREE.Points(dotsGeom, dotsMat)
+        scene.add(dots)
 
-        objectsRef.current = { brainGroup, sphere, innerSphere, particles }
+        stateRef.current.brain = brain
+        stateRef.current.material = material
+        stateRef.current.dots = dots
+        stateRef.current.dotsMat = dotsMat
 
-        // -- Mouse Listener --
-        const onMouseMove = (e) => {
-            mouseRef.current.targetX = (e.clientX / window.innerWidth) * 2 - 1
-            mouseRef.current.targetY = -(e.clientY / window.innerHeight) * 2 + 1
+        // -- Animation Loop --
+        const animate = () => {
+            stateRef.current.frameId = requestAnimationFrame(animate)
+
+            const elapsedTime = stateRef.current.clock.getElapsedTime()
+            const speedMultiplier = isRecording ? 2.5 : 1.0
+
+            // Faster rotation
+            brain.rotation.y = elapsedTime * 0.15 * speedMultiplier
+            brain.rotation.x = elapsedTime * 0.08 * speedMultiplier
+
+            // Subtle counter-rotation for depth dots
+            dots.rotation.y = -elapsedTime * 0.03
+
+            // More pronounced Floating / Bobbing
+            brain.position.y = Math.sin(elapsedTime * 0.6) * 0.3
+            brain.position.x = Math.cos(elapsedTime * 0.4) * 0.2
+
+            // Pulse the brain scale slightly
+            const scalePulse = 1 + Math.sin(elapsedTime * 2) * 0.02
+            brain.scale.setScalar(scalePulse * (isRecording ? 1.1 : 1.0))
+
+            renderer.render(scene, camera)
         }
-        window.addEventListener('mousemove', onMouseMove)
+        animate()
 
-        const onResize = () => {
-            if (!containerRef.current) return
+        // -- Listeners --
+        const handleResize = () => {
             camera.aspect = window.innerWidth / window.innerHeight
             camera.updateProjectionMatrix()
             renderer.setSize(window.innerWidth, window.innerHeight)
         }
-        window.addEventListener('resize', onResize)
-
-        // -- Animation Loop --
-        let lastTime = 0
-        const animate = (time) => {
-            animationFrameId.current = requestAnimationFrame(animate)
-
-            const delta = time - lastTime
-            lastTime = time
-
-            // Constant rotation
-            brainGroup.rotation.y += 0.005
-            particles.rotation.y -= 0.001
-
-            // Smother mouse follow
-            mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.05
-            mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.05
-
-            brainGroup.rotation.x = mouseRef.current.y * 0.3
-            brainGroup.rotation.z = -mouseRef.current.x * 0.2
-
-            // Breathing
-            const pulse = 1 + Math.sin(time * 0.002) * 0.04
-            sphere.scale.setScalar(pulse)
-            innerSphere.scale.setScalar(pulse * 0.9)
-
-            renderer.render(scene, camera)
-        }
-        animate(0)
+        window.addEventListener('resize', handleResize)
 
         // -- Cleanup --
         return () => {
-            window.removeEventListener('mousemove', onMouseMove)
-            window.removeEventListener('resize', onResize)
-            cancelAnimationFrame(animationFrameId.current)
-            if (renderer.domElement && containerRef.current) {
+            if (stateRef.current.frameId) {
+                cancelAnimationFrame(stateRef.current.frameId)
+            }
+            window.removeEventListener('resize', handleResize)
+            if (containerRef.current && renderer.domElement) {
                 containerRef.current.removeChild(renderer.domElement)
             }
             geometry.dispose()
             material.dispose()
-            innerGeom.dispose()
-            innerMat.dispose()
-            partGeom.dispose()
-            partMat.dispose()
+            dotsGeom.dispose()
+            dotsMat.dispose()
             renderer.dispose()
         }
-    }, [darkMode])
-
-    // Update colors based on recording state without re-mounting
-    useEffect(() => {
-        const { sphere, particles } = objectsRef.current
-        if (!sphere || !particles) return
-
-        const targetColor = isRecording ? 0xff4d4d : (darkMode ? 0x667eea : 0x4285f4)
-        const targetOpacity = isRecording ? 0.4 : 0.15
-
-        sphere.material.color.setHex(targetColor)
-        sphere.material.opacity = targetOpacity
-
-        particles.material.color.setHex(isRecording ? 0xff4d4d : (darkMode ? 0xffffff : 0x667eea))
-        particles.material.opacity = isRecording ? 0.7 : 0.4
-    }, [isRecording, darkMode])
+    }, [darkMode, isRecording]) // Re-run when Recording state changes to update speed multiplier logic
 
     return (
         <div
@@ -172,9 +127,8 @@ export default function BrainVisual({ isRecording = false }) {
                 left: 0,
                 width: '100vw',
                 height: '100vh',
-                zIndex: -1, // ALWAYS BEHIND CONTENT
+                zIndex: 1, // Changed from -1 to 1 to ensure it's above body background
                 pointerEvents: 'none',
-                opacity: 0.9,
                 background: 'transparent'
             }}
         />

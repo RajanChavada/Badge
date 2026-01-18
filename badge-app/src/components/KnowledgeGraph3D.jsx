@@ -42,9 +42,13 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
   useEffect(() => {
     if (!containerRef.current || nodes.length === 0) return
 
-    // Clean up previous scene if nodes have changed
+    // Clean up previous scene if nodes or theme have changed
     if (sceneInitializedRef.current && sceneRef.current) {
-      if (nodesRef.current && Object.keys(nodesRef.current).length === nodes.length) {
+      const currentTheme = darkMode ? 'dark' : 'light'
+      const nodesUnchanged = nodesRef.current && Object.keys(nodesRef.current).length === nodes.length
+      const themeUnchanged = sceneRef.current.userData.theme === currentTheme
+
+      if (nodesUnchanged && themeUnchanged) {
         return
       }
 
@@ -54,11 +58,12 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
       sceneInitializedRef.current = false
     }
 
-    console.log('Rendering graph with nodes:', nodes)
+    console.log('Re-initializing scene. Theme:', darkMode ? 'dark' : 'light')
 
     // Scene setup
     const scene = new THREE.Scene()
-    // scene.background = new THREE.Color(darkMode ? 0x1a1a1a : 0xf5f5f5)
+    scene.userData.theme = darkMode ? 'dark' : 'light'
+    scene.background = new THREE.Color(darkMode ? 0x0a0a0c : 0xf8f9fa)
     sceneRef.current = scene
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000)

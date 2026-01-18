@@ -11,18 +11,20 @@
 }
 
 /* Base Content Layer */
+/* Base Content Layer */
 .content-wrapper {
     position: relative;
     z-index: 10;
     max-width: 800px;
     width: 100%;
-    margin: 120px auto 2rem;
+    margin: 160px auto 2rem;
     /* Pushed down to clear floating navbar */
     text-align: center;
 }
 
 .conversation-header {
     margin-bottom: 3rem;
+    margin-top: 60px;
     animation: fadeInDown 0.8s ease;
 }
 
@@ -482,6 +484,7 @@
 :root[data-theme="dark"] .feedback-header h2 {
     background: linear-gradient(135deg, #fff 0%, #aaa 100%);
     -webkit-background-clip: text;
+    background-clip: text;
 }
 
 :root[data-theme="dark"] .summary-section p {

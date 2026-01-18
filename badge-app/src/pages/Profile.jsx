@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { useMutation, useQuery, useAction } from 'convex/react'
 import useAppStore from '../store/useAppStore.js'
@@ -40,6 +40,27 @@ export default function Profile() {
     targetSectors: [],
     lookingFor: [],
   })
+
+  // Evolution Stats (Hardcoded for now as requested)
+  const [progress] = useState({
+    communication: 65,
+    skills: 42,
+    sponsors: 78,
+    opportunities: 30,
+  })
+
+  const overallJourney = useMemo(() =>
+    Math.round((progress.communication + progress.skills + progress.sponsors + progress.opportunities) / 4),
+    [progress]
+  )
+
+  const floatingMetrics = [
+    { label: "Comm.", value: progress.communication },
+    { label: "Skills", value: progress.skills },
+    { label: "Sponsors", value: progress.sponsors },
+    { label: "Reach", value: progress.opportunities },
+  ]
+
 
   // Processing States
   const [resumeFile, setResumeFile] = useState(null)
@@ -223,52 +244,133 @@ export default function Profile() {
     }
   }
 
+  const [isFlipped, setIsFlipped] = useState(false)
+
+  // Toggle body class to hide navbar and prevent scroll
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.classList.add('modal-open')
+      document.documentElement.style.backgroundColor = '#000' // Force dark back for overlay
+    } else {
+      document.body.classList.remove('modal-open')
+      document.documentElement.style.backgroundColor = ''
+    }
+    return () => {
+      document.body.classList.remove('modal-open')
+      document.documentElement.style.backgroundColor = ''
+    }
+  }, [isModalOpen])
+
   return (
-    <div className="profile-page">
-      {/* 3D Badge Card */}
-      <Tilt
-        className="badge-tilt"
-        perspective={1000}
-        glareEnable={true}
-        glareMaxOpacity={0.45}
-        scale={1.02}
-      >
-        <div className="badge-card" onClick={() => setIsModalOpen(true)}>
-          <div className="badge-slot">
-            <div className="badge-hole"></div>
-          </div>
-
-          <div className="badge-header">
-            Event Attendee 2026
-          </div>
-
-          <div className="badge-content">
-            <img
-              src={user?.imageUrl || "https://via.placeholder.com/150"}
-              alt="Profile"
-              className="badge-avatar"
-            />
-            <h2 className="badge-name">{formData.name || user?.fullName || "Your Name"}</h2>
-            <p className="badge-role">
-              {formData.headline || "Tap to build your profile"}
-            </p>
-
-            <div className="badge-tags">
-              {formData.skills.slice(0, 3).map(skill => (
-                <span key={skill} className="mini-tag">{skill}</span>
-              ))}
-              {formData.interests.slice(0, 2).map(int => (
-                <span key={int} className="mini-tag">{int}</span>
-              ))}
-            </div>
-          </div>
-
-          <div className="badge-footer">
-            <div className="barcode"></div>
-            <span className="tap-hint">Tap card to edit profile</span>
-          </div>
+    <>
+      <div className={`profile-page ${isModalOpen ? 'modal-is-open' : ''}`}>
+        <div className="welcome-header">
+          <h1>Your Identity</h1>
+          <p className="subtitle">Evolving through experience</p>
         </div>
-      </Tilt>
+
+        {/* 3D Flippable Badge Card */}
+        <div className="badge-scene">
+          <Tilt
+            perspective={1200}
+            glareEnable={true}
+            glareMaxOpacity={0.15}
+            scale={1.02}
+            gyroscope={true}
+            className="badge-tilt-wrapper"
+          >
+            <motion.div
+              className={`badge-container ${isFlipped ? 'is-flipped' : ''}`}
+              animate={{ rotateY: isFlipped ? 180 : 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+            >
+              {/* FRONT SIDE */}
+              <div className="badge-face front" onClick={() => setIsFlipped(true)}>
+                <div className="badge-slot">
+                  <div className="badge-hole"></div>
+                </div>
+                <div className="badge-header">Event Attendee 2026</div>
+                <div className="badge-content">
+                  <img
+                    src={user?.imageUrl || "https://via.placeholder.com/150"}
+                    alt="Profile"
+                    className="badge-avatar"
+                  />
+                  <h2 className="badge-name">{formData.name || user?.fullName || "Your Name"}</h2>
+                  <p className="badge-role">
+                    {formData.headline || "Your Headline"}
+                  </p>
+                  <div className="badge-tags">
+                    {formData.skills.slice(0, 3).map(skill => (
+                      <span key={skill} className="mini-tag">{skill}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="badge-footer">
+                  <div className="barcode"></div>
+                  <span className="tap-hint">Tap to see your journey →</span>
+                </div>
+              </div>
+
+              {/* BACK SIDE */}
+              <div className="badge-face back" onClick={() => setIsFlipped(false)}>
+                <div className="evolution-header">
+                  <h3>Identity Evolution</h3>
+                  <div className="overall-stat">
+                    <span>Journey Completion</span>
+                    <span className="stat-value">{overallJourney}%</span>
+                  </div>
+                  <div className="progress-bar-large">
+                    <motion.div
+                      className="progress-fill-large"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${overallJourney}%` }}
+                      transition={{ duration: 1, delay: 0.3 }}
+                    />
+                  </div>
+                </div>
+
+                <div className="sub-meters">
+                  {[
+                    { label: "Communication", val: progress.communication },
+                    { label: "Skill Discovery", val: progress.skills },
+                    { label: "Sponsor Interactions", val: progress.sponsors },
+                    { label: "Opportunities", val: progress.opportunities },
+                  ].map((item, idx) => (
+                    <div key={idx} className="sub-meter-item">
+                      <div className="meter-label">
+                        <span>{item.label}</span>
+                        <span className="meter-val">{item.val}%</span>
+                      </div>
+                      <div className="meter-track">
+                        <motion.div
+                          className="meter-fill"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${item.val}%` }}
+                          transition={{ duration: 0.8, delay: 0.5 + (idx * 0.1) }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="badge-footer back-footer">
+                  <span className="tap-hint">Tap to see profile ←</span>
+                </div>
+              </div>
+            </motion.div>
+          </Tilt>
+        </div>
+
+        {/* Floating Action Buttons */}
+        <div className="profile-actions">
+          <button className="edit-profile-btn" onClick={() => setIsModalOpen(true)}>
+            <Sparkles size={16} /> Edit Profile
+          </button>
+        </div>
+
+
+      </div>
 
       {/* Edit Modal */}
       <AnimatePresence>
@@ -313,7 +415,9 @@ export default function Profile() {
                       className="hidden"
                       disabled={uploading || parsing}
                     />
-                    <Upload size={32} className="upload-icon-large" />
+                    <div className="upload-icon-container">
+                      <Upload size={40} />
+                    </div>
                     <div>
                       <strong>{isDragging ? "Drop Resume Here" : "Upload Resume (PDF)"}</strong>
                       <p>Drag & drop or click to upload</p>
@@ -361,7 +465,7 @@ export default function Profile() {
                     <label>Skills</label>
                     <div className="tags-container">
                       {formData.skills.map(skill => (
-                        <span key={skill} className="tag-badge">{skill}</span>
+                        <span key={skill} className="tag-badge pill">{skill}</span>
                       ))}
                     </div>
                     <p className="hint-text">Skills are auto-extracted from your resume.</p>
@@ -415,6 +519,6 @@ export default function Profile() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   )
 }

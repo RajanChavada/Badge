@@ -10,3 +10,8 @@
   position: relative;
   overflow-y: auto;
 }
+
+/* Hide Navbar when modal is open */
+body.modal-open .navbar {
+  display: none !important;
+}

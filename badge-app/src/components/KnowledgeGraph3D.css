@@ -2,7 +2,7 @@
   width: 100%;
   height: 100vh;
   position: relative;
-  background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
+  background: transparent;
   overflow: hidden;
   display: flex;
   align-items: flex-start;
@@ -11,7 +11,7 @@
 }
 
 .knowledge-graph-container.dark-theme {
-  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+  background: transparent;
 }
 
 .light-theme .node-info-panel,
@@ -38,38 +38,8 @@
 
 .dark-theme .node-info-panel p,
 .dark-theme .graph-legend li,
-.dark-theme .graph-help li,
-.dark-theme .talking-point-text-inline {
+.dark-theme .graph-help li {
   color: #e0e0e0;
-}
-
-.dark-theme .suggested-talking-points-inline {
-  background: rgba(50, 50, 50, 0.8);
-  border-color: #444;
-}
-
-.dark-theme .talking-points-header-inline p {
-  color: #667eea;
-}
-
-.dark-theme .refresh-button-inline {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
-}
-
-.dark-theme .refresh-button-inline:hover:not(:disabled) {
-  background: rgba(102, 126, 234, 0.2);
-}
-
-.dark-theme .tag {
-  border-color: #667eea;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
-}
-
-.dark-theme .tag:hover {
-  background: rgba(66, 133, 244, 0.2);
 }
 
 .graph-canvas {
@@ -84,7 +54,6 @@
 .graph-controls {
   position: absolute;
   top: 100px;
-  /* Pushed down to clear navbar */
   left: 20px;
   display: flex;
   gap: 10px;
@@ -92,34 +61,35 @@
 }
 
 .toggle-btn {
-  background-color: rgba(102, 126, 234, 0.8);
-  color: white;
-  border: 2px solid #667eea;
+  background: rgba(255, 255, 255, 0.8);
+  color: #333;
+  border: 1px solid #ddd;
   padding: 8px 14px;
   border-radius: 8px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark-theme .toggle-btn {
+  background: rgba(40, 40, 50, 0.8);
+  color: #eee;
+  border-color: #444;
 }
 
 .toggle-btn:hover {
-  background-color: rgba(102, 126, 234, 1);
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .toggle-btn.active {
-  background-color: #667eea;
+  background: #667eea;
+  color: white;
   border-color: #667eea;
-}
-
-.toggle-btn:not(.active) {
-  background-color: rgba(200, 200, 200, 0.7);
-  border-color: #999;
-  color: #333;
 }
 
 .node-info-panel {
@@ -127,179 +97,118 @@
   bottom: 20px;
   left: 20px;
   background: rgba(255, 255, 255, 0.95);
-  border: 2px solid #667eea;
-  border-radius: 12px;
-  padding: 20px;
-  max-width: 500px;
-  max-height: 80vh;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  max-width: 450px;
+  max-height: 70vh;
   overflow-y: auto;
   z-index: 100;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
-  animation: slideIn 0.3s ease-out;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.dark-theme .node-info-panel {
+  background: rgba(20, 20, 30, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .node-info-panel h3 {
-  margin: 0 0 12px 0;
-  font-size: 1.3em;
-  color: #667eea;
-  font-weight: 600;
-}
-
-.node-info-panel p {
-  margin: 8px 0;
-  color: #1a1a1a;
-  font-size: 0.95em;
-  line-height: 1.4;
-  font-weight: 500;
-}
-
-.node-info-panel strong {
-  color: #764ba2;
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 0.5rem;
+  margin: 1rem 0;
 }
 
 .tag {
-  display: inline-b102, 126, 234, 0.1);
-  border: 1px solid #667eea;
+  background: rgba(102, 126, 234, 0.1);
   color: #667eea;
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 0.85em;
-  transition: all 0.2s ease;
-  font-weight: 500;
+  padding: 0.4rem 1rem;
+  border-radius: 2rem;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
-.tag:hover {
-  background: rgba(102, 126, 234, 0.2 background: rgba(66, 133, 244, 0.3);
-      transform: translateY(-2px);
-  }
+.graph-legend {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  max-width: 200px;
+  z-index: 100;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
 
-  /* Legend/Controls */
-  .graph-legend {
-    position: fixed;
-    top: 120px;
-    /* Clear navbar */
-    right: 20px;
-    background: rgba(255, 255, 255, 0.95);
-    border: 2px solid #667eea;
-    border-radius: 12px;
-    padding: 20px;
-    max-width: 300px;
-    z-index: 100;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
-  }
+.dark-theme .graph-legend {
+  background: rgba(20, 20, 30, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+}
 
-  .graph-legend h4 {
-    margin: 0 0 12px 0;
-    color: #667eea;
-    font-size: 1em;
-    font-weight: 600;
-  }
+.graph-legend h4 {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #999;
+}
 
-  .graph-legend ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
+.graph-legend ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
 
-  .graph-legend li {
-    margin: 8px 0;
-    color: #1a1a1a;
-    font-size: 0.9em;
-    display: flex;
-    align-items: center;
-    font-weight: 500;
-  }
+.graph-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
 
-  .graph-legend li:before {
-    content: '';
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 8px;
-    background: #667eea;
-    margin-right: 8px;
-    background: #4285f4;
-  }
+.graph-legend li:before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color, #667eea);
+}
 
-  /* Generate Strategy Button in Node Info Panel */
-  .btn-node-generate-strategy {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 1em;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    position: relative;
-    overflow: hidden;
-  }
+.btn-node-generate-strategy {
+  margin-top: 1.5rem;
+  width: 100%;
+  padding: 1rem;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+}
 
-  .btn-node-generate-strategy::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s ease;
-  }
+.dark-theme .btn-node-generate-strategy {
+  background: white;
+  color: black;
+}
 
-  .btn-node-generate-strategy:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
-  }
-
-  .btn-node-generate-strategy:hover:not(:disabled)::before {
-    left: 100%;
-  }
-
-  .btn-node-generate-strategy:disabled {
-    opacity: 0.65;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .btn-node-generate-strategy:active:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  }
-
-  /* Dark mode button styling */
-  .knowledge-graph-container.dark-theme .btn-node-generate-strategy {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-  }
-
-  .knowledge-graph-container.dark-theme .btn-node-generate-strategy:hover:not(:disabled) {
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-  }
+.btn-node-generate-strategy:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-2px);
+}

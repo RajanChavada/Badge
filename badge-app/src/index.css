@@ -13,24 +13,25 @@
   /* Light Mode Colors */
   --bg-primary: #f8f9fa;
   --bg-secondary: #ffffff;
-  --text-primary: #333;
+  --bg-gradient: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  --text-primary: #1a1a1a;
   --text-secondary: #666;
   --border-color: #e0e0e0;
-  --shadow-color: rgba(0, 0, 0, 0.1);
+  --shadow-color: rgba(0, 0, 0, 0.05);
+  --accent-blue: #4285f4;
 }
 
 :root[data-theme="dark"] {
-  /* Dark Mode Colors - Perplexity-inspired */
-  --bg-primary: #1c1c1c;
-  /* Deeper black/gray */
-  --bg-secondary: #1e1e19;
-  /* Slightly lighter for cards */
+  /* Dark Mode Colors */
+  --bg-primary: #0a0a0c;
+  --bg-secondary: #16161a;
+  --bg-gradient: linear-gradient(135deg, #0a0a0c 0%, #16161a 100%);
   --text-primary: #f3f4f6;
   --text-secondary: #9ca3af;
   --border-color: #2d2d2d;
   --shadow-color: rgba(0, 0, 0, 0.4);
   --accent-color: #60a5fa;
-  /* Soft Blue */
+  --accent-blue: #667eea;
 }
 
 :root {
