@@ -7,6 +7,8 @@ import Profile from './pages/Profile.jsx'
 import KnowledgeGraph from './pages/KnowledgeGraph.jsx'
 import ChatInterface from './pages/ChatInterface.jsx'
 import Vector3D from './pages/Vector3D.jsx'
+import SimilarityRanking from './pages/SimilarityRanking.jsx'
+import UserProfile from './pages/UserProfile.jsx'
 import useAppStore from './store/useAppStore.js'
 import './App.css'
 import LiveConversation from './pages/LiveConversation.jsx'
@@ -39,6 +41,8 @@ function App() {
               <Route path="/chat" element={<ChatInterface />} />
               <Route path="/live" element={<LiveConversation />} />
               <Route path="/vector-3d" element={<Vector3D />} />
+              <Route path="/similarity" element={<SimilarityRanking />} />
+              <Route path="/user/:clerkId" element={<UserProfile />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </main>

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAction } from 'convex/react';
 import { useUser } from '@clerk/clerk-react';
 import { api } from '../../convex/_generated/api';
@@ -11,6 +12,7 @@ export default function Vector3D() {
   const [loading, setLoading] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const { user } = useUser();
+  const navigate = useNavigate();
   const getProfileVectors = useAction(api.users.getProfileVectors);
 
   useEffect(() => {
@@ -96,19 +98,89 @@ export default function Vector3D() {
     const zAxis = new THREE.Line(zAxisGeom, axesMaterial);
     scene.add(zAxis);
 
-    // Create points from 3D coords
-    const geometry = new THREE.BufferGeometry();
-    const positions = [];
-    const colors = [];
+    // Load star model
+    // Helper function to create a star from procedural geometry
+    const createStar = (position, color, size) => {
+      const starGroup = new THREE.Group();
+      starGroup.userData = {
+        isAnimated: true,
+        isStar: true,
+        time: 0,
+      };
+
+      // Create star geometry (5-pointed star)
+      const starShape = new THREE.Shape();
+      const outerRadius = 1;
+      const innerRadius = 0.4;
+      const points = 5;
+      
+      for (let i = 0; i < points * 2; i++) {
+        const radius = i % 2 === 0 ? outerRadius : innerRadius;
+        const angle = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+        if (i === 0) starShape.moveTo(x, y);
+        else starShape.lineTo(x, y);
+      }
+      starShape.lineTo(Math.cos(-Math.PI / 2) * outerRadius, Math.sin(-Math.PI / 2) * outerRadius);
+
+      // Extrude the star to give it depth
+      const geometry = new THREE.ExtrudeGeometry(starShape, {
+        depth: 0.5,
+        bevelEnabled: true,
+        bevelThickness: 0.1,
+        bevelSize: 0.1,
+        bevelSegments: 3,
+      });
+
+      const material = new THREE.MeshStandardMaterial({
+        color: color,
+        emissive: color,
+        emissiveIntensity: 0.6,
+        metalness: 0.4,
+        roughness: 0.3,
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.scale.set(size, size, size);
+      starGroup.add(mesh);
+
+      starGroup.position.copy(position);
+      return starGroup;
+    };
+
+    // Helper function to create an animated sphere
+    const createAnimatedSphere = (position, color) => {
+      const sphereGroup = new THREE.Group();
+      sphereGroup.userData = {
+        isAnimated: true,
+        isStar: false,
+        time: Math.random() * Math.PI * 2,
+      };
+      
+      const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+      const material = new THREE.MeshStandardMaterial({
+        color: color,
+        emissive: new THREE.Color(color).multiplyScalar(0.5),
+        metalness: 0.3,
+        roughness: 0.4,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      sphereGroup.add(mesh);
+      
+      sphereGroup.position.copy(position);
+      
+      return sphereGroup;
+    };
+
+    const animatedObjects = [];
 
     data.forEach((profile, idx) => {
       const [x, y, z] = profile.coords3d;
       const scaledX = x * 100;
       const scaledY = y * 100;
       const scaledZ = z * 100;
-      
-      // Scale up to fit in view (vectors are small values ~0.02 to 0.1)
-      positions.push(scaledX, scaledY, scaledZ);
+      const position = new THREE.Vector3(scaledX, scaledY, scaledZ);
       
       // Color: green for current user, rainbow for others
       let color;
@@ -118,7 +190,17 @@ export default function Vector3D() {
         const hue = idx / Math.max(data.length, 1);
         color = new THREE.Color().setHSL(hue, 0.8, 0.6);
       }
-      colors.push(color.r, color.g, color.b);
+
+      // Create star for current user, sphere for others
+      if (profile.clerkId === currentUserClerkId) {
+        const star = createStar(position, color.getHex(), 0.5);
+        scene.add(star);
+        animatedObjects.push(star);
+      } else {
+        const sphere = createAnimatedSphere(position, color.getHex());
+        scene.add(sphere);
+        animatedObjects.push(sphere);
+      }
 
       // Create line from origin to vector point with arrow
       const arrowHelper = new THREE.ArrowHelper(
@@ -132,23 +214,10 @@ export default function Vector3D() {
       scene.add(arrowHelper);
     });
 
-    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
-
-    const material = new THREE.PointsMaterial({
-      size: 1.5,
-      vertexColors: true,
-      sizeAttenuation: true,
-    });
-
-    const points = new THREE.Points(geometry, material);
-    scene.add(points);
-
     // Remove labels - will show on click instead
 
     // Click detection
     const raycaster = new THREE.Raycaster();
-    raycaster.params.Points.threshold = 0.5; // Increase click area around points
     const mouse = new THREE.Vector2();
     
     // Drag controls
@@ -164,12 +233,18 @@ export default function Vector3D() {
       mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
       
-      const intersects = raycaster.intersectObject(points);
+      // Check intersections with animated objects (spheres and stars)
+      const intersects = raycaster.intersectObjects(animatedObjects, true);
       if (intersects.length > 0) {
-        const idx = intersects[0].index;
-        const profile = data[idx];
-        console.log('Clicked vector index:', idx, 'profile:', profile);
-        setSelectedProfile(profile);
+        // Find which profile this object belongs to
+        const clickedObject = intersects[0].object.parent;
+        const profileIdx = animatedObjects.indexOf(clickedObject);
+        if (profileIdx >= 0 && profileIdx < data.length) {
+          const profile = data[profileIdx];
+          console.log('Clicked vector index:', profileIdx, 'profile:', profile);
+          // Navigate to user profile page
+          navigate(`/user/${profile.clerkId}`);
+        }
       }
     };
     
@@ -229,6 +304,26 @@ export default function Vector3D() {
     // Animation loop
     const animate = () => {
       requestAnimationFrame(animate);
+      
+      // Animate spheres and stars
+      animatedObjects.forEach((obj) => {
+        if (obj.userData.isAnimated) {
+          obj.userData.time += 0.01;
+          
+          if (obj.userData.isStar) {
+            // Star is static (no animation)
+          } else {
+            // Rotate spheres
+            obj.rotation.x += 0.005;
+            obj.rotation.y += 0.008;
+            
+            // Pulsing scale effect
+            const scale = 1 + Math.sin(obj.userData.time) * 0.1;
+            obj.scale.set(scale, scale, scale);
+          }
+        }
+      });
+      
       renderer.render(scene, camera);
     };
     animate();
