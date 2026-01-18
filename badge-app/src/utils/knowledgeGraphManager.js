@@ -25,6 +25,7 @@ export class KnowledgeGraphManager {
         data: {
           companyName: booth.companyName,
           description: booth.description,
+          talkingPoints: booth.talkingPoints,
           tags: booth.tags,
           keyPeople: booth.keyPeople,
           visitCount: 0,

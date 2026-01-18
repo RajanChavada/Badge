@@ -118,7 +118,7 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
         id: node.id,
         label: node.label,
         type: node.type,
-        data: node,
+        ...node.data,
       }
 
       scene.add(mesh)
@@ -265,15 +265,35 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
         <div className="node-info-panel">
           <h3>{selectedNode.label}</h3>
           <p><strong>Type:</strong> {selectedNode.type}</p>
-          {selectedNode.data.description && (
-            <p><strong>Description:</strong> {selectedNode.data.description}</p>
+          {selectedNode.description && (
+            <p><strong>Description:</strong> {selectedNode.description}</p>
           )}
-          {selectedNode.data.tags && (
-            <div className="tags">
-              {selectedNode.data.tags.map((tag) => (
-                <span key={tag} className="tag">
-                  {tag}
-                </span>
+          {selectedNode.talkingPoints && (
+            <p><strong>Talking Points:</strong> {selectedNode.talkingPoints}</p>
+          )}
+          {selectedNode.tags && selectedNode.tags.length > 0 && (
+            <div>
+              <p style={{ marginBottom: '0.5rem' }}><strong>Focus Areas:</strong></p>
+              <div className="tags">
+                {selectedNode.tags.map((tag) => (
+                  <span key={tag} className="tag">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {selectedNode.keyPeople && selectedNode.keyPeople.length > 0 && (
+            <div style={{ marginTop: '1rem' }}>
+              <p><strong>Key People:</strong></p>
+              {selectedNode.keyPeople.map((person) => (
+                <div key={person.id} style={{ marginLeft: '0.5rem', marginBottom: '0.5rem' }}>
+                  <p style={{ margin: '0.25rem 0' }}><strong>{person.name}</strong> - {person.role}</p>
+                  <p style={{ margin: '0.25rem 0', fontSize: '0.85em' }}>{person.bio}</p>
+                  {person.expertise && person.expertise.length > 0 && (
+                    <p style={{ margin: '0.25rem 0', fontSize: '0.85em' }}>Expertise: {person.expertise.join(', ')}</p>
+                  )}
+                </div>
               ))}
             </div>
           )}

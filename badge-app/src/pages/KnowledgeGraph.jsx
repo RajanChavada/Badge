@@ -14,6 +14,17 @@ const SPONSOR_BOOTHS = [
     description: 'Search & Cloud Solutions',
     color: 0x4285f4,
     tags: ['AI/ML', 'Cloud', 'Web Dev'],
+    talkingPoints: 'Visit us to learn about our latest innovations in AI and cloud computing',
+    keyPeople: [
+      {
+        id: 'p1',
+        name: 'To be announced',
+        role: 'TBA',
+        company: 'Google',
+        bio: 'Connect with us at the booth',
+        expertise: ['AI/ML', 'Cloud', 'Web Dev'],
+      },
+    ],
   },
   {
     id: '2',
@@ -22,6 +33,17 @@ const SPONSOR_BOOTHS = [
     description: 'E-Commerce Platform',
     color: 0x96be28,
     tags: ['E-Commerce', 'Web Dev', 'Payments'],
+    talkingPoints: 'Explore opportunities with the commerce platform',
+    keyPeople: [
+      {
+        id: 'p2',
+        name: 'To be announced',
+        role: 'TBA',
+        company: 'Shopify',
+        bio: 'Connect with us at the booth',
+        expertise: ['E-Commerce', 'Web Dev', 'Payments'],
+      },
+    ],
   },
   {
     id: '3',
@@ -30,6 +52,17 @@ const SPONSOR_BOOTHS = [
     description: 'Cloud & AI Platform',
     color: 0x00a4ef,
     tags: ['Cloud', 'AI/ML', 'Enterprise'],
+    talkingPoints: 'Discover career opportunities in cloud infrastructure and AI',
+    keyPeople: [
+      {
+        id: 'p3',
+        name: 'To be announced',
+        role: 'TBA',
+        company: 'Microsoft',
+        bio: 'Connect with us at the booth',
+        expertise: ['Cloud', 'AI/ML', 'Enterprise'],
+      },
+    ],
   },
   {
     id: '4',
@@ -38,6 +71,17 @@ const SPONSOR_BOOTHS = [
     description: 'Social & VR',
     color: 0x1877f2,
     tags: ['Web Dev', 'Mobile Dev', 'VR/AR'],
+    talkingPoints: 'Join us to explore the future of social and virtual reality',
+    keyPeople: [
+      {
+        id: 'p4',
+        name: 'To be announced',
+        role: 'TBA',
+        company: 'Meta',
+        bio: 'Connect with us at the booth',
+        expertise: ['Web Dev', 'Mobile Dev', 'VR/AR'],
+      },
+    ],
   },
 ]
 
