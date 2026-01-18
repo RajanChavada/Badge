@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import Navigation from './components/Navigation.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Profile from './pages/Profile.jsx'
-import Map from './pages/Map.jsx'
+import KnowledgeGraph from './pages/KnowledgeGraph.jsx'
 import ChatInterface from './pages/ChatInterface.jsx'
 import Vector3D from './pages/Vector3D.jsx'
 import useAppStore from './store/useAppStore.js'
@@ -29,7 +29,7 @@ function App() {
             <Routes>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/map" element={<Map />} />
+              <Route path="/map" element={<KnowledgeGraph />} />
               <Route path="/chat" element={<ChatInterface />} />
               <Route path="/vector-3d" element={<Vector3D />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />

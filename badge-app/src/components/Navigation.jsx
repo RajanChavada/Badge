@@ -37,8 +37,8 @@ export default function Navigation() {
             to="/map"
             className={`nav-link ${isActive('/map') ? 'active' : ''}`}
           >
-            <MapPin size={20} />
-            <span>Map</span>
+            <Zap size={20} />
+            <span>Knowledge Graph</span>
           </Link>
           <Link
             to="/chat"
