@@ -3,7 +3,7 @@ import { Mic, Square, Sparkles, AlertCircle, ArrowRight, X, Send, MessageCircle 
 import { useAction } from "convex/react";
 import { useUser } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
-import { createBackboardSession, sendBackboardMessage } from '../utils/backboardClient';
+import { createChatSession, sendChatMessage } from '../utils/backboardClient';
 import ReactMarkdown from 'react-markdown';
 import './LiveConversation.css'
 
@@ -19,10 +19,11 @@ export default function LiveConversation() {
     const [chatMessages, setChatMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
     const [isChatLoading, setIsChatLoading] = useState(false);
-    const [backboardClient, setBackboardClient] = useState(null);
+    const chatSessionRef = useRef(null);
 
     const transcribeAudio = useAction(api.speechToText.transcribeAudio);
     const processInteraction = useAction(api.processInteraction.process);
+    const sendChatAction = useAction(api.backboard.sendChatMessage);
 
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
@@ -126,41 +127,33 @@ export default function LiveConversation() {
         setIsChatOpen(true);
         setIsChatLoading(true);
         setChatMessages([]);
-        setBackboardClient(null);
+
+        const context = {
+            summary: feedback.summary || '',
+            nextBestAction: feedback.suggestedFollowUp || '',
+            mentionedSkills: feedback.mentionedSkills || [],
+            mentionedInterests: feedback.mentionedInterests || [],
+        };
+
+        // Create a session with the Convex action and store in ref
+        const session = createChatSession(context, sendChatAction, user?.id);
+        chatSessionRef.current = session;
 
         try {
-            // Create a Backboard session with context (frontend call)
-            const client = await createBackboardSession({
-                summary: feedback.summary || '',
-                nextBestAction: feedback.suggestedFollowUp || '',
-                mentionedSkills: feedback.mentionedSkills || [],
-                mentionedInterests: feedback.mentionedInterests || [],
-            });
-
-            if (client) {
-                setBackboardClient(client);
-                // Get initial response from Backboard
-                const initialResponse = await sendBackboardMessage(
-                    client,
-                    `I just had a conversation and the suggested next action is: "${feedback.suggestedFollowUp}". Can you help me prepare for this?`
-                );
-                setChatMessages([{
-                    role: 'assistant',
-                    content: initialResponse
-                }]);
-            } else {
-                // Fallback if Backboard not configured
-                setChatMessages([{
-                    role: 'assistant',
-                    content: `Based on your conversation, I recommend: **${feedback.suggestedFollowUp}**\n\nWould you like me to help you prepare for this next connection? I can provide conversation starters, talking points, or answer any questions!`
-                }]);
-            }
-
-        } catch (err) {
-            console.error("Failed to create chat session:", err);
+            // Get initial response
+            const initialResponse = await sendChatMessage(
+                session,
+                `Help me prepare for this next action: "${feedback.suggestedFollowUp}". Give me a quick tip.`
+            );
             setChatMessages([{
                 role: 'assistant',
-                content: `I'm here to help with your networking! Your next best action is: **${feedback.suggestedFollowUp}**\n\nFeel free to ask me anything about how to approach this.`
+                content: initialResponse
+            }]);
+        } catch (err) {
+            console.error("Failed to get initial response:", err);
+            setChatMessages([{
+                role: 'assistant',
+                content: `Your next best action is: **${feedback.suggestedFollowUp}**\n\nHow can I help you prepare for this?`
             }]);
         } finally {
             setIsChatLoading(false);
@@ -178,18 +171,16 @@ export default function LiveConversation() {
         setIsChatLoading(true);
 
         try {
-            if (backboardClient) {
-                // Use Backboard with memory
-                const response = await sendBackboardMessage(backboardClient, userMessage);
+            if (chatSessionRef.current) {
+                const response = await sendChatMessage(chatSessionRef.current, userMessage);
                 setChatMessages(prev => [...prev, {
                     role: 'assistant',
                     content: response
                 }]);
             } else {
-                // Fallback response
                 setChatMessages(prev => [...prev, {
                     role: 'assistant',
-                    content: "I'm having trouble connecting. Please try reopening the chat."
+                    content: "Session not initialized. Please reopen the chat."
                 }]);
             }
         } catch (err) {
@@ -200,7 +191,6 @@ export default function LiveConversation() {
             }]);
         } finally {
             setIsChatLoading(false);
-            // Scroll to bottom
             if (chatContainerRef.current) {
                 chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
             }

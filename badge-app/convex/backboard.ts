@@ -1,39 +1,15 @@
 import { v } from "convex/values";
 import { action } from "./_generated/server";
-
-/**
- * Create a chat session context (stored client-side, no external API needed for init)
- */
-export const createChatSession = action({
-    args: {
-        summary: v.string(),
-        nextBestAction: v.string(),
-        mentionedSkills: v.array(v.string()),
-        mentionedInterests: v.array(v.string()),
-    },
-    handler: async (_, args) => {
-        // Generate a unique session ID (we'll manage context on the client)
-        const sessionId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-        return {
-            success: true,
-            sessionId,
-            context: {
-                summary: args.summary,
-                nextBestAction: args.nextBestAction,
-                mentionedSkills: args.mentionedSkills,
-                mentionedInterests: args.mentionedInterests,
-            }
-        };
-    },
-});
+import { api } from "./_generated/api";
 
 /**
  * Send a message using Gemini for the networking coach chat
+ * Includes user profile from Convex for personalized feedback
  */
 export const sendChatMessage = action({
     args: {
         message: v.string(),
+        clerkId: v.optional(v.string()),
         conversationHistory: v.array(v.object({
             role: v.string(),
             content: v.string(),
@@ -45,7 +21,7 @@ export const sendChatMessage = action({
             mentionedInterests: v.array(v.string()),
         }),
     },
-    handler: async (_, args) => {
+    handler: async (ctx, args) => {
         const geminiKey = process.env.GEMINI_API_KEY;
 
         if (!geminiKey) {
@@ -53,25 +29,48 @@ export const sendChatMessage = action({
             throw new Error("Gemini API key not configured");
         }
 
-        // Build the system prompt with context
-        const systemPrompt = `You are an AI networking coach at a hackathon/career fair event.
+        // Fetch user profile if clerkId is provided
+        let userProfile = null;
+        if (args.clerkId) {
+            try {
+                userProfile = await ctx.runQuery(api.users.getProfile, { clerkId: args.clerkId });
+            } catch (err) {
+                console.log("[Chat] Could not fetch user profile:", err);
+            }
+        }
 
-CONTEXT FROM THE USER'S RECENT CONVERSATION:
-Summary: ${args.context.summary}
+        // Build user identity section
+        let userIdentitySection = "";
+        if (userProfile && userProfile.identity) {
+            const identity = userProfile.identity;
+            userIdentitySection = `
+USER'S IDENTITY (use this to personalize advice):
+- Name: ${userProfile.name || "Not specified"}
+- Headline: ${identity.headline || "Not specified"}
+- Skills: ${identity.skills?.join(", ") || "Not specified"}
+- Interests: ${identity.interests?.join(", ") || "Not specified"}
+- Goals: ${identity.goals?.join(", ") || "Not specified"}
+- Target Roles: ${identity.targetRoles?.join(", ") || "Not specified"}
+${identity.coreTraits?.length ? `- Personality Traits: ${identity.coreTraits.join(", ")}` : ""}
+${identity.workStyle ? `- Work Style: ${identity.workStyle}` : ""}
+`;
+        }
 
-RECOMMENDED NEXT ACTION: ${args.context.nextBestAction}
+        // Build the system prompt with context and user identity
+        const systemPrompt = `You are a friendly networking coach helping someone at a hackathon/career fair.
+${userIdentitySection}
+CURRENT CONVERSATION CONTEXT:
+- Recent conversation summary: ${args.context.summary}
+- Suggested next action: ${args.context.nextBestAction}
+- Skills mentioned: ${args.context.mentionedSkills.join(", ") || "Not specified"}
+- Interests mentioned: ${args.context.mentionedInterests.join(", ") || "Not specified"}
 
-Skills mentioned: ${args.context.mentionedSkills.join(", ") || "None specified"}
-Interests mentioned: ${args.context.mentionedInterests.join(", ") || "None specified"}
-
-Your role is to help the user:
-1. Understand why this next action is valuable for their networking goals
-2. Provide specific conversation starters for their next connection
-3. Give them talking points and ice-breakers
-4. Answer questions about networking strategy at events
-
-Be concise, friendly, and action-oriented. Use bullet points when helpful.
-Focus on practical, immediately usable advice.`;
+RESPONSE GUIDELINES:
+- Be concise and direct (2-3 short paragraphs max)
+- Personalize advice based on the user's identity and goals
+- Give specific, actionable advice that connects their skills/interests to the next action
+- Focus on the user's actual question
+- Don't repeat the context back to them`;
 
         // Build conversation for Gemini
         const historyText = args.conversationHistory.length > 0
