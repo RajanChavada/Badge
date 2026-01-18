@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { UserButton } from '@clerk/clerk-react'
-import { Home, Zap, MapPin, User, Moon, Sun, Box, Mic } from 'lucide-react'
+import { Zap, User, Moon, Sun, Box, Mic } from 'lucide-react'
 import useAppStore from '../store/useAppStore.js'
 
 import './Navigation.css'
@@ -14,19 +14,11 @@ export default function Navigation() {
   return (
     <nav className="navbar">
       <div className="navbar-container">
-        <Link to="/dashboard" className="navbar-brand">
-          <span className="brand-icon">🎯</span>
-          <span className="brand-text">Badge</span>
+        <Link to="/profile" className="navbar-brand">
+          <img src="/badge-logo.png" alt="Badge" className="brand-logo" />
         </Link>
 
         <div className="nav-links">
-          <Link
-            to="/dashboard"
-            className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
-          >
-            <Home size={20} />
-            <span>Dashboard</span>
-          </Link>
           <Link
             to="/profile"
             className={`nav-link ${isActive('/profile') ? 'active' : ''}`}

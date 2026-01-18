@@ -17,8 +17,7 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   /* Thinner border */
   border-radius: 9999px;
-  padding: 0.35rem 0.75rem;
-  /* Tighter padding */
+  padding: 0.5rem 1rem;
   box-shadow:
     0 8px 32px -4px rgba(0, 0, 0, 0.5),
     0 0 0 1px rgba(255, 255, 255, 0.05);
@@ -48,15 +47,21 @@
 .navbar-brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   text-decoration: none;
-  font-weight: 700;
-  font-size: 1.1rem;
-  /* Slightly smaller brand text */
-  color: white;
-  white-space: nowrap;
   padding-right: 0.5rem;
   padding-left: 0.5rem;
+}
+
+.brand-logo {
+  height: 78px;
+  width: auto;
+  object-fit: contain;
+  transition: filter 0.2s ease;
+}
+
+/* Invert logo to white in dark mode */
+:root[data-theme="dark"] .brand-logo {
+  filter: invert(1);
 }
 
 :root[data-theme="light"] .navbar-brand {
@@ -127,6 +132,12 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+/* Make Clerk UserButton larger */
+.user-menu .cl-avatarBox {
+  width: 36px !important;
+  height: 36px !important;
 }
 
 .dark-mode-toggle {
