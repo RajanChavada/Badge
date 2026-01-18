@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { useAppStore } from '../store/useAppStore.js'
+
 import { api } from '../../convex/_generated/api.js'
 import { extractTextFromPDF } from '../utils/pdfParser.js'
 import { Upload, Save, Sparkles, User, Briefcase, GraduationCap, Code, Target } from 'lucide-react'
@@ -17,6 +18,9 @@ export default function Profile() {
   const getProfileQuery = useQuery(api.users.getProfile, user?.id ? { clerkId: user.id } : 'skip')
   const upsertProfileMutation = useMutation(api.users.upsertProfile)
   const parseResumeAction = useAction(api.resumeParser.parseResume)
+  const vectorizeAction = useAction(api.users.vectorizeProfileInSnowflake)
+
+
   const { userProfile, setUserProfile } = useAppStore()
   const [isEditing, setIsEditing] = useState(!userProfile)
   const [formData, setFormData] = useState({
@@ -233,7 +237,30 @@ export default function Profile() {
 
       setUserProfile({ ...formData, identity })
       setIsEditing(false)
-      setStatus('✅ Profile saved!')
+
+      setResumeFile(null)
+      setStatus('Saved!')
+
+      // Vectorize profile in Snowflake asynchronously
+      try {
+        const vectorResult = await vectorizeAction({
+          clerkId: user.id,
+          name: formData.name || user?.fullName || '',
+          education: formData.education,
+          interests: formData.interests,
+          resumeText: extractedResumeText || undefined,
+        })
+        
+        if (vectorResult.success) {
+          console.log('[Profile] Snowflake vectorization succeeded:', vectorResult)
+        } else {
+          console.error('[Profile] Snowflake vectorization failed:', vectorResult.reason)
+          setStatus(`Saved! (Snowflake vectorization skipped: ${vectorResult.reason})`)
+        }
+      } catch (err) {
+        console.error('[Profile] Snowflake vectorization error:', err)
+        setStatus(`Saved! (Snowflake vectorization failed: ${err.message || 'Unknown error'})`)
+      }
     } catch (err) {
       console.error(err)
       setError('Failed to save profile to Convex.')
