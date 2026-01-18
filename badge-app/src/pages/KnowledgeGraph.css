@@ -4,6 +4,43 @@
   position: relative;
   background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
   overflow: hidden;
+  transition: background 0.3s ease;
+}
+
+.knowledge-graph-page.dark-theme {
+  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+}
+
+.light-theme .graph-legend,
+.light-theme .graph-help,
+.light-theme .loading-message {
+  background: rgba(255, 255, 255, 0.95);
+  color: #1a1a1a;
+}
+
+.dark-theme .graph-legend,
+.dark-theme .graph-help,
+.dark-theme .loading-message {
+  background: rgba(30, 30, 30, 0.95);
+  color: #e0e0e0;
+}
+
+.dark-theme .graph-legend h4,
+.dark-theme .graph-help h4 {
+  color: #667eea;
+}
+
+.dark-theme .graph-legend li,
+.dark-theme .graph-help li {
+  color: #e0e0e0;
+}
+
+.dark-theme .graph-help strong {
+  color: #9a9cff;
+}
+
+.dark-theme .loading-message p {
+  color: #667eea;
 }
 
 .loading-message {

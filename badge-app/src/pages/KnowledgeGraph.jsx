@@ -4,6 +4,7 @@ import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api.js'
 import KnowledgeGraph3D from '../components/KnowledgeGraph3D.jsx'
 import { graphManager } from '../utils/knowledgeGraphManager.js'
+import useAppStore from '../store/useAppStore.js'
 import './KnowledgeGraph.css'
 
 const SPONSOR_BOOTHS = [
@@ -87,6 +88,7 @@ const SPONSOR_BOOTHS = [
 
 export default function KnowledgeGraph() {
   const { user } = useUser()
+  const { darkMode } = useAppStore()
   const userProfile = useQuery(api.users.getProfile, user?.id ? { clerkId: user.id } : 'skip')
   const [selectedNode, setSelectedNode] = useState(null)
   const [graphData, setGraphData] = useState({ nodes: [], edges: [] })
@@ -150,7 +152,7 @@ export default function KnowledgeGraph() {
   }
 
   return (
-    <div className="knowledge-graph-page">
+    <div className={`knowledge-graph-page ${darkMode ? 'dark-theme' : 'light-theme'}`}>
       {graphData.nodes.length === 0 ? (
         <div className="loading-message">
           <p>Loading knowledge graph...</p>
