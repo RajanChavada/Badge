@@ -17,6 +17,7 @@ import type * as processInteraction from "../processInteraction.js";
 import type * as reccomendations from "../reccomendations.js";
 import type * as resumeParser from "../resumeParser.js";
 import type * as speechToText from "../speechToText.js";
+import type * as talkingPoints from "../talkingPoints.js";
 import type * as users from "../users.js";
 
 import type {
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   reccomendations: typeof reccomendations;
   resumeParser: typeof resumeParser;
   speechToText: typeof speechToText;
+  talkingPoints: typeof talkingPoints;
   users: typeof users;
 }>;
 

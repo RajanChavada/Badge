@@ -2,7 +2,9 @@
  * talkingPoints.ts
  *
  * Backend-only helper module to:
- * - Fetch a user's profile + parsed resume from Convex (read-only)
+ * - Fetch a user's profile from Convex (read-only). Convex 'users' store the following fields:
+ *   _id, email, identity, name, resumeText
+ *   Note: In this project, `identity` holds the parsed resume information (structured data extracted from resume).
  * - Extract structured user signals using Gemini 1.5 Flash
  * - Generate exactly 3 personalized talking points using GPT-4.1-mini via OpenRouter
  *
@@ -29,20 +31,27 @@
  * - If something about Convex or the LLM endpoints is ambiguous, a TODO comment is left.
  */
 
-type UserProfile = {
-    id: string;
-    fullName?: string;
-    headline?: string;
-    email?: string;
-    location?: string;
-    // other fields may exist; keep structure minimal
+type ParsedResume = {
+    // Expect resume-parsed structure (skills, experiences, etc.) but keep flexible.
+    // This structure is stored on the Convex `users` record under `identity` in this project.
+    rawText?: string;
+    parsed?: any;
+    skills?: string[];
+    experience?: string;
+    industries?: string[];
+    currentEmploymentStatus?: string;
     [key: string]: any;
 };
 
-type ParsedResume = {
-    // Expect resume-parsed structure (skills, experiences, etc.) but keep flexible.
-    rawText?: string;
-    parsed?: any;
+type UserProfile = {
+    _id: string;
+    email?: string;
+    // In this project `identity` holds parsed resume information (see ParsedResume).
+    // Keep it flexible to allow other keys if present.
+    identity?: ParsedResume | { [key: string]: any } | null;
+    name?: string;
+    resumeText?: string; // raw resume text stored in Convex
+    // other fields may exist; keep structure minimal and extensible
     [key: string]: any;
 };
 
@@ -67,7 +76,9 @@ Return a JSON object with the following keys:
 - industries: an array of industries or sectors the user has worked in (short strings)
 - currentEmploymentStatus: one short phrase describing current employment status (e.g., "employed full-time", "contractor", "open to opportunities")
 
-Input data will be provided as a JSON object with keys "profile" and "parsedResume". Be conservative and extract only what is clear.
+Input data will be provided as a JSON object with keys "profile" and "parsedResume".
+Note: in this project the parsed resume may already be present on profile.identity; parsedResume may be null in that case.
+Be conservative and extract only what is clear.
 Respond ONLY with valid JSON.
 `;
 
@@ -93,7 +104,7 @@ ${companyDescription}
      --------------------------- */
 
 /**
- * Fetch user profile + parsed resume data from Convex (read-only).
+ * Fetch user profile from Convex (read-only).
  *
  * NOTE: Convex SDKs vary by project. This implementation attempts a generic HTTP fetch
  * if CONVEX_FETCH_URL is provided. If your project uses the Convex Node SDK, replace
@@ -104,11 +115,11 @@ ${companyDescription}
  * - CONVEX_API_KEY
  *
  * Returns:
- *   { profile, parsedResume }
+ *   { profile }
  *
  * Throws on missing configuration.
  */
-export async function fetchUserFromConvex(userId: string): Promise<{ profile: UserProfile | null; parsedResume: ParsedResume | null }> {
+export async function fetchUserFromConvex(userId: string): Promise<{ profile: UserProfile | null }> {
     const url = process.env.CONVEX_FETCH_URL;
     const key = process.env.CONVEX_API_KEY;
 
@@ -120,7 +131,7 @@ export async function fetchUserFromConvex(userId: string): Promise<{ profile: Us
     }
 
     // Generic fetch: expects a small backend endpoint or proxy that returns:
-    // { profile: {...}, parsedResume: {...} }
+    // { profile: {...} }
     // The exact contract is intentionally small and generic because project setups vary.
     const resp = await fetch(url, {
         method: 'POST',
@@ -128,7 +139,7 @@ export async function fetchUserFromConvex(userId: string): Promise<{ profile: Us
             'Content-Type': 'application/json',
             Authorization: `Bearer ${key}`,
         },
-        body: JSON.stringify({ action: 'getUserProfileAndResume', userId }),
+        body: JSON.stringify({ action: 'getUserProfile', userId }),
     });
 
     if (!resp.ok) {
@@ -139,7 +150,6 @@ export async function fetchUserFromConvex(userId: string): Promise<{ profile: Us
     const body = (await resp.json()) || {};
     return {
         profile: body.profile ?? null,
-        parsedResume: body.parsedResume ?? null,
     };
 }
 
@@ -156,6 +166,9 @@ export async function fetchUserFromConvex(userId: string): Promise<{ profile: Us
  *
  * The implementation assumes a generic REST endpoint that accepts a JSON payload:
  * { prompt: string, input: {...} } and returns a JSON string in .text or .output.
+ *
+ * The function accepts both a parsedResume object (if provided separately) or will accept parsed resume
+ * data embedded in profile.identity.
  *
  * TODO: Replace the fetch logic with exact Vertex AI/GenAI client calls if desired.
  */
@@ -361,8 +374,9 @@ export async function generateTalkingPointsWithOpenRouter(signals: UserSignals, 
  * Main helper: given a userId and a companyDescription (string), returns exactly 3 personalized talking points.
  *
  * Flow:
- * 1) Fetch user profile + parsed resume from Convex (read-only)
- * 2) Extract structured user signals via Gemini 1.5 Flash
+ * 1) Fetch user profile from Convex (read-only). Convex 'users' store _id, email, identity (parsed resume), name, resumeText.
+ * 2) Extract structured user signals via Gemini 1.5 Flash (parsed resume is taken from parsedResume param if available,
+ *    otherwise from profile.identity which holds parsed resume in this project)
  * 3) Use OpenRouter + GPT-4.1-mini to generate exactly 3 talking points
  *
  * Returns Promise<string[]> (exactly 3 strings) or throws on unrecoverable errors.
@@ -372,10 +386,15 @@ export async function generateTalkingPoints(userId: string, companyDescription: 
     if (!companyDescription) throw new Error('companyDescription is required');
 
     // 1) Fetch read-only user data from Convex
-    const { profile, parsedResume } = await fetchUserFromConvex(userId);
+    const { profile } = await fetchUserFromConvex(userId);
+
+    // Determine parsed resume: prefer a separate parsedResume if provided by upstream fetch contract,
+    // otherwise use profile.identity which in this project contains parsed resume information.
+    const parsedResumeFromProfile: ParsedResume | null =
+        (profile && typeof profile.identity === 'object' ? (profile.identity as ParsedResume) : null) ?? null;
 
     // 2) Extract signals (Gemini)
-    const signals = await extractSignalsWithGemini(profile, parsedResume);
+    const signals = await extractSignalsWithGemini(profile, parsedResumeFromProfile);
 
     // 3) Generate talking points (OpenRouter)
     const talkingPoints = await generateTalkingPointsWithOpenRouter(signals, companyDescription);
