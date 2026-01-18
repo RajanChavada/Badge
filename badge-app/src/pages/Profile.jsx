@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
-import { useAction, useMutation, useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { useAppStore } from '../store/useAppStore.js'
 import { api } from '../../convex/_generated/api.js'
 import { extractTextFromPDF } from '../utils/pdfParser.js'
@@ -16,7 +16,8 @@ export default function Profile() {
   const { user } = useUser()
   const getProfileQuery = useQuery(api.users.getProfile, user?.id ? { clerkId: user.id } : 'skip')
   const upsertProfileMutation = useMutation(api.users.upsertProfile)
-  const parseResumeAction = useAction(api.resumeParser.parseResume)
+  const generateResumeUploadUrlMutation = useMutation(api.users.generateResumeUploadUrl)
+  const saveResumeFileIdMutation = useMutation(api.users.saveResumeFileId)
   const { userProfile, setUserProfile } = useAppStore()
   const [isEditing, setIsEditing] = useState(!userProfile)
   const [formData, setFormData] = useState({
@@ -47,7 +48,7 @@ export default function Profile() {
   // Load existing profile from Convex when the user signs in
   useEffect(() => {
     if (getProfileQuery === undefined) return
-    
+
     setLoadingProfile(false)
     const profile = getProfileQuery
     if (profile) {
@@ -102,11 +103,11 @@ export default function Profile() {
         const extractedText = await extractTextFromPDF(file)
         setExtractedResumeText(extractedText)
         setStatus(`✅ Extracted ${extractedText.length} characters. Now analyzing with AI...`)
-        
+
         // Step 2: AUTOMATICALLY parse with Gemini AI
         setParsing(true)
         setUploading(false)
-        
+
         const result = await parseResumeAction({
           resumeText: extractedText,
           userName: user?.fullName || formData.name,
@@ -116,7 +117,7 @@ export default function Profile() {
         if (result.success && result.identity) {
           console.log('[Profile] AI parsed identity:', result.identity)
           setParsedIdentity(result.identity)
-          
+
           // Update form with AI-extracted data
           setFormData(prev => ({
             ...prev,
@@ -132,7 +133,7 @@ export default function Profile() {
             targetRoles: result.identity.targetRoles || prev.targetRoles,
             lookingFor: result.identity.lookingFor || prev.lookingFor,
           }))
-          
+
           setStatus('✅ Resume analyzed! Review your profile and click Save.')
         } else {
           setError(result.error || 'AI parsing failed. You can still fill in your profile manually.')
@@ -170,7 +171,7 @@ export default function Profile() {
       if (result.success && result.identity) {
         console.log('[Profile] AI parsed identity:', result.identity)
         setParsedIdentity(result.identity)
-        
+
         // Update form with AI-extracted data
         setFormData(prev => ({
           ...prev,
@@ -186,7 +187,7 @@ export default function Profile() {
           targetRoles: result.identity.targetRoles || prev.targetRoles,
           lookingFor: result.identity.lookingFor || prev.lookingFor,
         }))
-        
+
         setStatus('✅ Resume analyzed! Review and save your profile.')
       } else {
         setError(result.error || 'Failed to parse resume')
@@ -233,7 +234,8 @@ export default function Profile() {
 
       setUserProfile({ ...formData, identity })
       setIsEditing(false)
-      setStatus('✅ Profile saved!')
+      setResumeFile(null)
+      setStatus('Saved!')
     } catch (err) {
       console.error(err)
       setError('Failed to save profile to Convex.')
@@ -297,14 +299,14 @@ export default function Profile() {
                 </p>
               )}
             </div>
-            
+
             {uploading && (
               <div className="processing-status">
                 <Upload size={20} className="spin" />
                 <p>📄 Extracting text from PDF...</p>
               </div>
             )}
-            
+
             {parsing && (
               <div className="processing-status">
                 <Sparkles size={20} className="spin" />
@@ -370,11 +372,11 @@ export default function Profile() {
                 </div>
               )}
             </div>
-            
+
             {/* Re-parse option */}
             {extractedResumeText && !parsing && (
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="btn-reparse"
                 onClick={handleParseWithAI}
                 disabled={parsing}

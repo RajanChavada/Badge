@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
+
 import { Send, Mic, MicOff, Volume2, VolumeX, Plus, Sparkles } from 'lucide-react'
 import { useAction } from "convex/react";
 import { useUser } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
 import { useAppStore } from '../store/useAppStore.js'
+
 import './ChatInterface.css'
 
 export default function ChatInterface() {

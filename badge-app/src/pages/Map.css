@@ -13,14 +13,14 @@
 
 .map-header h1 {
   font-size: 2rem;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-weight: 700;
 }
 
 .map-header .subtitle {
   font-size: 1rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .map-container {
@@ -33,9 +33,9 @@
 
 .map-view {
   position: relative;
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px var(--shadow-color);
   overflow: hidden;
 }
 

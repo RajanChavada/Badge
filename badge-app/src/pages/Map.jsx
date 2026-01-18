@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import { useAppStore } from '../store/useAppStore.js'
+import { useState, useEffect, useRef} from 'react'
+import useAppStore from '../store/useAppStore.js'
 import { MapPin, Search, Filter, Loader } from 'lucide-react'
 import './Map.css'
 
