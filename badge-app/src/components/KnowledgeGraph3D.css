@@ -4,12 +4,58 @@
   position: relative;
   background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
   overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
 }
 
 .graph-canvas {
   width: 100%;
   height: 100%;
   display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.graph-controls {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  gap: 10px;
+  z-index: 50;
+}
+
+.toggle-btn {
+  background-color: rgba(102, 126, 234, 0.8);
+  color: white;
+  border: 2px solid #667eea;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-btn:hover {
+  background-color: rgba(102, 126, 234, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.toggle-btn.active {
+  background-color: #667eea;
+  border-color: #667eea;
+}
+
+.toggle-btn:not(.active) {
+  background-color: rgba(200, 200, 200, 0.7);
+  border-color: #999;
+  color: #333;
 }
 
 .node-info-panel {

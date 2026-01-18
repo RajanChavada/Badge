@@ -18,7 +18,21 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
   const animationFrameIdRef = useRef(null)
   const labelsContainerRef = useRef(null)
   const labelsRef = useRef({})
+  const animationTimeRef = useRef(0)
+  const showLabelsRef = useRef(true)
+  const showBobbingRef = useRef(true)
   const [selectedNode, setSelectedNode] = useState(null)
+  const [showLabels, setShowLabels] = useState(true)
+  const [showBobbing, setShowBobbing] = useState(true)
+
+  // Update refs when state changes
+  useEffect(() => {
+    showLabelsRef.current = showLabels
+  }, [showLabels])
+
+  useEffect(() => {
+    showBobbingRef.current = showBobbing
+  }, [showBobbing])
 
   // Memoize the onNodeClick callback
   const memoizedOnNodeClick = useCallback(onNodeClick, [])
@@ -164,6 +178,10 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
         mesh,
         position: mesh.position.clone(),
         originalColor: material.color.clone(),
+        // Random phase offsets for independent bobbing
+        phaseX: Math.random() * Math.PI * 2,
+        phaseY: Math.random() * Math.PI * 2,
+        phaseZ: Math.random() * Math.PI * 2,
       }
       nodesByPosition[node.id] = mesh.position
     })
@@ -249,11 +267,26 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
     const animate = () => {
       animationFrameIdRef.current = requestAnimationFrame(animate)
       controls.update()
+      
+      animationTimeRef.current += 0.016 // ~60fps
 
       // Gentle rotation of nodes
       Object.values(nodesRef.current).forEach(node => {
         node.mesh.rotation.x += 0.001
         node.mesh.rotation.y += 0.002
+        
+        // Add bobbing motion in random directions when enabled
+        if (showBobbingRef.current) {
+          const bobAmount = 2
+          const time = animationTimeRef.current
+          // Each node bobs independently using its random phase offsets
+          node.mesh.position.x = node.position.x + Math.sin(time * 1.5 + node.phaseX) * bobAmount * 0.6
+          node.mesh.position.y = node.position.y + Math.cos(time * 1.3 + node.phaseY) * bobAmount * 0.6
+          node.mesh.position.z = node.position.z + Math.sin(time * 1.1 + node.phaseZ) * bobAmount * 0.8
+        } else {
+          // Reset to original position if bobbing is disabled
+          node.mesh.position.copy(node.position)
+        }
       })
 
       // Update label positions to follow nodes
@@ -267,8 +300,8 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
         label.style.left = (x - label.offsetWidth / 2) + 'px'
         label.style.top = (y - 30) + 'px'
         
-        // Hide labels that are behind the camera
-        label.style.opacity = vector.z > 1 ? '0' : '1'
+        // Hide labels that are behind the camera or if labels are disabled
+        label.style.opacity = (vector.z > 1 || !showLabelsRef.current) ? '0' : '1'
       })
 
       composer.render()
@@ -320,6 +353,25 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
   return (
     <div className="knowledge-graph-container">
       <div ref={containerRef} className="graph-canvas" />
+      
+      {/* Toggle buttons */}
+      <div className="graph-controls">
+        <button 
+          className={`toggle-btn ${showLabels ? 'active' : ''}`}
+          onClick={() => setShowLabels(!showLabels)}
+          title="Toggle node labels"
+        >
+          {showLabels ? '🏷️ Labels ON' : '🏷️ Labels OFF'}
+        </button>
+        <button 
+          className={`toggle-btn ${showBobbing ? 'active' : ''}`}
+          onClick={() => setShowBobbing(!showBobbing)}
+          title="Toggle node bobbing animation"
+        >
+          {showBobbing ? '🎈 Bobbing ON' : '🎈 Bobbing OFF'}
+        </button>
+      </div>
+      
       {selectedNode && (
         <div className="node-info-panel">
           <h3>{selectedNode.label}</h3>
