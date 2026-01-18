@@ -9,5 +9,6 @@
   flex: 1;
   overflow-y: auto;
   background: var(--bg-primary);
+  padding-top: 100px;
+  /* Space for floating navbar */
 }
-

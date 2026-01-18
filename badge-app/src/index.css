@@ -20,13 +20,22 @@
 }
 
 :root[data-theme="dark"] {
-  /* Dark Mode Colors */
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #2d2d2d;
-  --text-primary: #e0e0e0;
-  --text-secondary: #a0a0a0;
-  --border-color: #404040;
-  --shadow-color: rgba(0, 0, 0, 0.3);
+  /* Dark Mode Colors - Perplexity-inspired */
+  --bg-primary: #121212;
+  /* Deeper black/gray */
+  --bg-secondary: #1e1e19;
+  /* Slightly lighter for cards */
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --border-color: #2d2d2d;
+  --shadow-color: rgba(0, 0, 0, 0.4);
+  --accent-color: #60a5fa;
+  /* Soft Blue */
+}
+
+:root {
+  /* Common variables */
+  --navbar-height: 70px;
 }
 
 body {
