@@ -40,9 +40,10 @@ export const transcribeAudio = action({
     const elevenlabsKey = process.env.ELEVENLABS_API_KEY;
 
     if (!elevenlabsKey) {
+      console.error("❌ ELEVENLABS_API_KEY is missing. Please set it in the Convex Dashboard.");
       return {
         success: false,
-        error: "ELEVENLABS_API_KEY not configured. Add it in Convex Dashboard > Settings > Environment Variables",
+        error: "Configuration Error: ELEVENLABS_API_KEY is missing. Check backend logs.",
       };
     }
 
@@ -65,6 +66,7 @@ export const transcribeAudio = action({
       );
       // Use the speech-to-text model
       formData.append("model_id", "scribe_v1");
+      formData.append("tag_audio_events", "false");
 
       console.log("Sending audio to ElevenLabs...", {
         size: audioBytes.length,

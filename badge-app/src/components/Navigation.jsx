@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'react-router-dom'
 import { UserButton } from '@clerk/clerk-react'
-import { Home, MapPin, MessageCircle, User, Moon, Sun, Box, BarChart3 } from 'lucide-react'
+import { Home, Zap, MapPin, MessageCircle, User, Moon, Sun, Box, Mic, BarChart3 } from 'lucide-react'
 import useAppStore from '../store/useAppStore.js'
+
 import './Navigation.css'
 
 export default function Navigation() {
@@ -37,8 +38,8 @@ export default function Navigation() {
             to="/map"
             className={`nav-link ${isActive('/map') ? 'active' : ''}`}
           >
-            <MapPin size={20} />
-            <span>Map</span>
+            <Zap size={20} />
+            <span>Knowledge Graph</span>
           </Link>
           <Link
             to="/chat"
@@ -46,6 +47,13 @@ export default function Navigation() {
           >
             <MessageCircle size={20} />
             <span>Chat</span>
+          </Link>
+          <Link
+            to="/live"
+            className={`nav-link ${isActive('/live') ? 'active' : ''}`}
+          >
+            <Mic size={20} />
+            <span>Live</span>
           </Link>
           <Link
             to="/vector-3d"
@@ -64,8 +72,8 @@ export default function Navigation() {
         </div>
 
         <div className="user-menu">
-          <button 
-            className="dark-mode-toggle" 
+          <button
+            className="dark-mode-toggle"
             onClick={toggleDarkMode}
             aria-label="Toggle dark mode"
           >

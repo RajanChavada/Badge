@@ -12,66 +12,45 @@ export const getProfile = query({
   },
 });
 
-export const generateResumeUploadUrl = mutation({
-  handler: async (ctx) => {
-    return await ctx.storage.generateUploadUrl();
-  },
-});
+// Rich identity object validator - accepts null from Gemini
+const identityValidator = v.object({
+  headline: v.string(),
+  summary: v.optional(v.union(v.string(), v.null())),
 
-export const saveResumeFileId = mutation({
-  args: {
-    clerkId: v.string(),
-    storageId: v.id("_storage"),
-  },
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-    
-    if (existing) {
-      // Delete old file if it exists
-      if (existing.resumeFileId) {
-        try {
-          await ctx.storage.delete(existing.resumeFileId);
-        } catch (e) {
-          // File may have already been deleted
-        }
-      }
-      
-      await ctx.db.patch(existing._id, {
-        resumeFileId: args.storageId,
-      });
-      return existing._id;
-    } else {
-      const now = Date.now();
-      const id = await ctx.db.insert("users", {
-        clerkId: args.clerkId,
-        email: "",
-        name: "",
-        resumeFileId: args.storageId,
-        createdAt: now,
-      });
-      return id;
-    }
-  },
-});
+  education: v.optional(v.array(v.object({
+    institution: v.string(),
+    degree: v.optional(v.union(v.string(), v.null())),
+    field: v.optional(v.union(v.string(), v.null())),
+    graduationYear: v.optional(v.union(v.string(), v.null())),
+    gpa: v.optional(v.union(v.string(), v.null())),
+  }))),
 
-export const getResumeDownloadUrl = query({
-  args: { clerkId: v.string() },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first();
-    
-    if (!user || !user.resumeFileId) {
-      return null;
-    }
-    
-    const downloadUrl = await ctx.storage.getUrl(user.resumeFileId);
-    return downloadUrl;
-  },
+  experience: v.optional(v.array(v.object({
+    company: v.string(),
+    role: v.string(),
+    duration: v.optional(v.union(v.string(), v.null())),
+    highlights: v.optional(v.union(v.array(v.string()), v.null())),
+  }))),
+
+  projects: v.optional(v.array(v.object({
+    name: v.string(),
+    description: v.optional(v.union(v.string(), v.null())),
+    technologies: v.optional(v.union(v.array(v.string()), v.null())),
+    url: v.optional(v.union(v.string(), v.null())),
+  }))),
+
+  skills: v.array(v.string()),
+  technicalSkills: v.optional(v.union(v.array(v.string()), v.null())),
+  softSkills: v.optional(v.union(v.array(v.string()), v.null())),
+  languages: v.optional(v.union(v.array(v.string()), v.null())),
+
+  interests: v.array(v.string()),
+  goals: v.array(v.string()),
+  targetRoles: v.optional(v.union(v.array(v.string()), v.null())),
+  targetCompanyTypes: v.optional(v.union(v.array(v.string()), v.null())),
+
+  lookingFor: v.optional(v.union(v.array(v.string()), v.null())),
+  availableFor: v.optional(v.union(v.array(v.string()), v.null())),
 });
 
 export const getProfileVectors = action({
@@ -178,14 +157,7 @@ export const upsertProfile = mutation({
     email: v.string(),
     name: v.string(),
     resumeText: v.optional(v.string()),
-    identity: v.optional(
-      v.object({
-        headline: v.string(),
-        skills: v.array(v.string()),
-        interests: v.array(v.string()),
-        goals: v.array(v.string()),
-      })
-    ),
+    identity: v.optional(identityValidator),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -194,18 +166,35 @@ export const upsertProfile = mutation({
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .first();
 
+    // Build identity with lastUpdated
+    const identityToSave = args.identity
+      ? {
+        headline: args.identity.headline,
+        summary: args.identity.summary ?? undefined,
+        education: args.identity.education,
+        experience: args.identity.experience,
+        projects: args.identity.projects,
+        skills: args.identity.skills,
+        technicalSkills: args.identity.technicalSkills ?? undefined,
+        softSkills: args.identity.softSkills ?? undefined,
+        languages: args.identity.languages ?? undefined,
+        interests: args.identity.interests,
+        goals: args.identity.goals,
+        targetRoles: args.identity.targetRoles ?? undefined,
+        targetCompanyTypes: args.identity.targetCompanyTypes ?? undefined,
+        lookingFor: args.identity.lookingFor ?? undefined,
+        availableFor: args.identity.availableFor ?? undefined,
+        lastUpdated: now,
+      }
+      : undefined;
+
     if (existing) {
       await ctx.db.patch(existing._id, {
         email: args.email,
         name: args.name,
         resumeText: args.resumeText,
-        identity: args.identity
-          ? {
-              ...args.identity,
-              lastUpdated: now,
-            }
-          : existing.identity,
-        identityVersion: (existing.identityVersion ?? 0) + 1,
+        identity: identityToSave ?? existing.identity,
+        updatedAt: now,
       });
       return existing._id;
     } else {
@@ -214,18 +203,109 @@ export const upsertProfile = mutation({
         email: args.email,
         name: args.name,
         resumeText: args.resumeText,
-        identity: args.identity
-          ? {
-              ...args.identity,
-              lastUpdated: now,
-            }
-          : undefined,
+        identity: identityToSave,
         createdAt: now,
-        identityVersion: 1,
+        updatedAt: now,
       });
       return id;
     }
   },
+});
+
+// Quick update for specific identity fields (for manual edits)
+export const updateIdentityFields = mutation({
+  args: {
+    clerkId: v.string(),
+    skills: v.optional(v.array(v.string())),
+    interests: v.optional(v.array(v.string())),
+    goals: v.optional(v.array(v.string())),
+    targetRoles: v.optional(v.array(v.string())),
+    lookingFor: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!existing) {
+      throw new Error("User not found");
+    }
+
+    const currentIdentity = (existing.identity as Record<string, unknown>) || {
+      headline: "Hackathon Attendee",
+      skills: [],
+      interests: [],
+      goals: [],
+      lastUpdated: Date.now(),
+    };
+
+    await ctx.db.patch(existing._id, {
+      identity: {
+        ...currentIdentity,
+        skills: args.skills ?? currentIdentity.skills,
+        interests: args.interests ?? currentIdentity.interests,
+        goals: args.goals ?? currentIdentity.goals,
+        targetRoles: args.targetRoles ?? currentIdentity.targetRoles,
+        lookingFor: args.lookingFor ?? currentIdentity.lookingFor,
+        lastUpdated: Date.now(),
+      },
+      updatedAt: Date.now(),
+    });
+
+    return existing._id;
+  },
+});
+
+// Evolve identity based on interaction insights (append-only)
+export const evolveUserIdentity = mutation({
+  args: {
+    clerkId: v.string(),
+    newSkills: v.array(v.string()),
+    newInterests: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!existing) return null;
+
+    const currentIdentity = (existing.identity as any) || {
+      skills: [],
+      interests: [],
+    };
+
+    const updatedSkills = Array.from(new Set([
+      ...(currentIdentity.skills || []),
+      ...args.newSkills
+    ]));
+
+    const updatedInterests = Array.from(new Set([
+      ...(currentIdentity.interests || []),
+      ...args.newInterests
+    ]));
+
+    // Only patch if there are changes
+    if (updatedSkills.length !== (currentIdentity.skills?.length || 0) ||
+      updatedInterests.length !== (currentIdentity.interests?.length || 0)) {
+
+      await ctx.db.patch(existing._id, {
+        identity: {
+          ...currentIdentity,
+          skills: updatedSkills,
+          interests: updatedInterests,
+          lastUpdated: Date.now(),
+        },
+        updatedAt: Date.now(),
+      });
+      console.log(`[Evolve] Updated user ${args.clerkId}: +${args.newSkills.length} skills, +${args.newInterests.length} interests`);
+    }
+
+    return existing._id;
+  },
+
 });
 
 export const vectorizeProfileInSnowflake = action({
@@ -272,7 +352,7 @@ Resume: ${args.resumeText || ''}
       // Snowflake SQL REST API endpoint
       const snowflakeUrl = `https://${account}.snowflakecomputing.com/api/v2/statements`
       console.log('[Snowflake] API URL:', snowflakeUrl)
-      
+
       // Choose auth header: Bearer (preferred if provided) else Basic
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -338,3 +418,4 @@ Resume: ${args.resumeText || ''}
     }
   },
 });
+
