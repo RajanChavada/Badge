@@ -7,7 +7,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import useAppStore from '../store/useAppStore.js'
 import './KnowledgeGraph3D.css'
 
-export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick = () => {} }) {
+export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick = () => {}, onGenerateBoothStrategy, loadingStrategies = false, sponsorBooths = [] }) {
   const { darkMode } = useAppStore()
   const containerRef = useRef(null)
   const sceneRef = useRef(null)
@@ -408,6 +408,56 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
                   )}
                 </div>
               ))}
+            </div>
+          )}
+          {selectedNode.type === 'booth' && onGenerateBoothStrategy && (
+            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e0e0e0' }}>
+              <button
+                className="btn-node-generate-strategy"
+                onClick={() => {
+                  // Extract booth ID from the selectedNode id (format: "booth-1", "booth-2", etc.)
+                  const boothId = selectedNode.id.split('-')[1]
+                  // Find the booth in sponsorBooths array
+                  const booth = sponsorBooths.find(b => b.id === boothId)
+                  if (booth) {
+                    onGenerateBoothStrategy(booth)
+                  }
+                }}
+                disabled={loadingStrategies}
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: 'none',
+                  color: 'white',
+                  padding: '14px 24px',
+                  borderRadius: '8px',
+                  cursor: loadingStrategies ? 'not-allowed' : 'pointer',
+                  fontWeight: '700',
+                  fontSize: '1.05em',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  width: '100%',
+                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                  opacity: loadingStrategies ? 0.65 : 1,
+                  transform: 'translateY(0)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!loadingStrategies) {
+                    e.target.style.transform = 'translateY(-3px)'
+                    e.target.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.5)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!loadingStrategies) {
+                    e.target.style.transform = 'translateY(0)'
+                    e.target.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)'
+                  }
+                }}
+              >
+                {loadingStrategies ? '⟳ Generating...' : '⟳ Generate Strategy'}
+              </button>
             </div>
           )}
         </div>

@@ -528,3 +528,152 @@ Make the suggestions specific, actionable, and genuine.`;
     }
   },
 });
+
+export const generateBoothApproachStrategy = action({
+  args: {
+    userProfile: v.object({
+      name: v.string(),
+      headline: v.string(),
+      skills: v.array(v.string()),
+      interests: v.array(v.string()),
+      education: v.array(v.object({
+        institution: v.string(),
+        degree: v.string(),
+        field: v.string(),
+        gpa: v.optional(v.string()),
+        graduationYear: v.optional(v.string()),
+      })),
+      experience: v.array(v.object({
+        company: v.string(),
+        role: v.string(),
+        duration: v.string(),
+        highlights: v.optional(v.array(v.string())),
+      })),
+      goals: v.array(v.string()),
+      targetRoles: v.array(v.string()),
+    }),
+    booth: v.object({
+      id: v.string(),
+      name: v.string(),
+      companyName: v.string(),
+      description: v.string(),
+      tags: v.array(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const { userProfile, booth } = args;
+    const geminiKey = process.env.GEMINI_API_KEY;
+    
+    if (!geminiKey) {
+      throw new Error('GEMINI_API_KEY not configured');
+    }
+
+    // Format user profile data for the prompt
+    const userSkills = userProfile.skills.join(', ') || 'Not specified';
+    const userInterests = userProfile.interests.join(', ') || 'Not specified';
+    const userGoals = userProfile.goals.join(', ') || 'Not specified';
+    const userTargetRoles = userProfile.targetRoles.join(', ') || 'Not specified';
+    const boothTags = booth.tags.join(', ') || 'Not specified';
+    
+    const userEducation = userProfile.education
+      .map(e => `${e.degree} in ${e.field} from ${e.institution}`)
+      .join('; ') || 'Not specified';
+    
+    const userExperience = userProfile.experience
+      .map(e => `${e.role} at ${e.company} (${e.duration})`)
+      .join('; ') || 'Not specified';
+
+    const prompt = `You are a career advisor helping ${userProfile.name} (${userProfile.headline}) prepare to approach the ${booth.companyName} booth at a career fair.
+
+About the person:
+- Skills: ${userSkills}
+- Interests: ${userInterests}
+- Career Goals: ${userGoals}
+- Target Roles: ${userTargetRoles}
+- Education: ${userEducation}
+- Experience: ${userExperience}
+
+About the ${booth.companyName} booth:
+- Description: ${booth.description}
+- Focus Areas: ${boothTags}
+
+Generate a personalized strategy for how this person should approach this booth. Provide the response as a JSON object with these four arrays:
+1. "keyStrategies" - 3-4 main strategies for approaching and talking to the booth representative each max a sentence
+2. "whyGood" - 3-4 reasons why this person is a good fit for what ${booth.companyName} is looking for each max a sentence
+3. "whatToAsk" - 3-4 specific, intelligent questions to ask the booth representative bonus points if it has something to do with the booth rep each max a sentence
+4. "preparation" - 3-4 specific preparation steps before approaching the booth each max a sentence
+
+Focus on making the recommendations specific to both the person's profile and the booth's expertise areas.
+
+Respond ONLY with valid JSON object, no additional text.`;
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': geminiKey,
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: prompt,
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 1024,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error('Gemini API error:', response.status, response.statusText);
+        return {
+          keyStrategies: ['Unable to generate strategy. Please try again later.'],
+          whyGood: [],
+          whatToAsk: [],
+          preparation: [],
+        };
+      }
+
+      const data = await response.json();
+      const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!content) {
+        console.error('No content in Gemini response. Full response:', JSON.stringify(data));
+        return {
+          keyStrategies: ['Could not generate booth approach strategy. Please try again.'],
+          whyGood: [],
+          whatToAsk: [],
+          preparation: [],
+        };
+      }
+
+      // Extract JSON from the response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.log('Could not parse JSON from Gemini content:', content);
+        return {
+          keyStrategies: [content],
+          whyGood: [],
+          whatToAsk: [],
+          preparation: [],
+        };
+      }
+
+      const boothStrategy = JSON.parse(jsonMatch[0]);
+      return boothStrategy;
+    } catch (error) {
+      console.error('Error generating booth approach strategy:', error);
+      throw error;
+    }
+  },
+});
