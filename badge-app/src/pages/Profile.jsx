@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation, useQuery, useAction } from 'convex/react'
 import useAppStore from '../store/useAppStore.js'
 import { api } from '../../convex/_generated/api.js'
 import { extractTextFromPDF } from '../utils/pdfParser.js'
@@ -18,6 +18,7 @@ export default function Profile() {
   const upsertProfileMutation = useMutation(api.users.upsertProfile)
   const generateResumeUploadUrlMutation = useMutation(api.users.generateResumeUploadUrl)
   const saveResumeFileIdMutation = useMutation(api.users.saveResumeFileId)
+  const parseResumeAction = useAction(api.resumeParser.parseResume)
   const { userProfile, setUserProfile } = useAppStore()
   const [isEditing, setIsEditing] = useState(!userProfile)
   const [formData, setFormData] = useState({
