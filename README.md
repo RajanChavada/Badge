@@ -1,6 +1,8 @@
 # Badge
 Building a unique professional identity for meaningful connections and effective networking at hackathons, conferences, and career fairs!'
+
 See our Devpost: https://devpost.com/software/badge
+
 See a video demo: https://youtu.be/LNbBaZ9Qs3c
 
 ## Inspiration
