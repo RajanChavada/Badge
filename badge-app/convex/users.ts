@@ -74,6 +74,115 @@ export const getResumeDownloadUrl = query({
   },
 });
 
+export const getProfileVectors = action({
+  handler: async (ctx) => {
+    const account = process.env.SNOWFLAKE_ACCOUNT
+    const user = process.env.SNOWFLAKE_USER
+    const password = process.env.SNOWFLAKE_PASSWORD
+    const bearerToken = process.env.SNOWFLAKE_BEARER_TOKEN
+    const database = process.env.SNOWFLAKE_DATABASE || 'badge_app'
+    const warehouse = process.env.SNOWFLAKE_WAREHOUSE || 'badge_wh'
+
+    if (!account || !user || (!password && !bearerToken)) {
+      return { success: false, data: [] }
+    }
+
+    try {
+      const snowflakeUrl = `https://${account}.snowflakecomputing.com/api/v2/statements`
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      if (bearerToken) {
+        headers['Authorization'] = `Bearer ${bearerToken}`
+        headers['X-Snowflake-Authorization-Token-Type'] = 'KEYPAIR_JWT'
+      } else {
+        const authToken = btoa(`${user}:${password}`)
+        headers['Authorization'] = `Basic ${authToken}`
+      }
+
+      const sql = `
+        SELECT clerk_id, name, profile_vector
+        FROM ${database}.profiles.user_profiles
+        WHERE profile_vector IS NOT NULL
+        LIMIT 100;
+      `
+
+      const response = await fetch(snowflakeUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          statement: sql,
+          timeout: 60,
+          database: database,
+          warehouse: warehouse,
+        }),
+      })
+      console.log('[Snowflake] Response: ' + response)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[Snowflake] Error fetching vectors:', errorText)
+        return { success: false, data: [] }
+      }
+
+      const result = await response.json()
+      console.log('[Snowflake] Data array:', result.data)
+      console.log('[Snowflake] Data length:', result.data?.length)
+      
+      // Parse Snowflake response - data is the array of rows
+      const profiles: Array<{
+        clerkId: string
+        name: string
+        vector: number[]
+        coords3d: number[]
+      }> = []
+      
+      if (result.data && result.data.length > 0) {
+        console.log('[Snowflake] Processing', result.data.length, 'rows')
+        result.data.forEach((row: any, idx: number) => {
+          console.log(`[Snowflake] Row ${idx}:`, row)
+          const clerkId = row[0]
+          const name = row[1]
+          const vectorString = row[2]
+          
+          // Parse vector string to array
+          let vectorArray: number[] = []
+          try {
+            vectorArray = JSON.parse(vectorString)
+          } catch (e) {
+            console.error(`[Snowflake] Failed to parse vector for row ${idx}:`, e)
+          }
+          
+          console.log(`[Snowflake] Row ${idx} - clerkId:`, clerkId, 'name:', name, 'vectorLength:', vectorArray.length)
+          
+          // Extract first 3 coords
+          const coords3d = vectorArray && vectorArray.length >= 3 
+            ? [vectorArray[0], vectorArray[1], vectorArray[2]]
+            : [0, 0, 0]
+          
+          profiles.push({
+            clerkId,
+            name,
+            vector: vectorArray,
+            coords3d,
+          })
+        })
+      } else {
+        console.log('[Snowflake] No data in response')
+      }
+
+      console.log('[Snowflake] Parsed profiles:', profiles.length)
+      return { success: true, data: profiles }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error('[Snowflake] Exception:', errorMessage)
+      return { success: false, data: [] }
+    }
+  },
+})
+
 export const upsertProfile = mutation({
   args: {
     clerkId: v.string(),
@@ -195,7 +304,7 @@ Resume: ${args.resumeText || ''}
           SELECT 
             '${args.clerkId}' AS clerk_id,
             '${args.name}' AS name,
-            SNOWFLAKE.CORTEX.EMBED_TEXT_1536('${profileText}') AS profile_vector,
+            SNOWFLAKE.CORTEX.EMBED_TEXT_768('snowflake-arctic-embed-m-v1.5', '${profileText}') AS profile_vector,
             CURRENT_TIMESTAMP() AS updated_at
         ) AS source
         ON target.clerk_id = source.clerk_id
@@ -217,8 +326,7 @@ Resume: ${args.resumeText || ''}
         body: JSON.stringify({
           statement: sql,
           timeout: 60,
-          database,
-          warehouse,
+          database: database
         }),
       })
 

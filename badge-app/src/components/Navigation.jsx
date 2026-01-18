@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { UserButton } from '@clerk/clerk-react'
-import { Home, MapPin, MessageCircle, User, Moon, Sun } from 'lucide-react'
+import { Home, MapPin, MessageCircle, User, Moon, Sun, Box } from 'lucide-react'
 import useAppStore from '../store/useAppStore.js'
 import './Navigation.css'
 
@@ -46,6 +46,13 @@ export default function Navigation() {
           >
             <MessageCircle size={20} />
             <span>Chat</span>
+          </Link>
+          <Link
+            to="/vector-3d"
+            className={`nav-link ${isActive('/vector-3d') ? 'active' : ''}`}
+          >
+            <Box size={20} />
+            <span>3D Vectors</span>
           </Link>
         </div>
 
