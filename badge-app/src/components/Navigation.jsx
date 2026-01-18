@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
 import { UserButton } from '@clerk/clerk-react'
-import { Home, Zap, MessageCircle, User } from 'lucide-react'
+import { Home, MapPin, MessageCircle, User, Moon, Sun, Box } from 'lucide-react'
+import useAppStore from '../store/useAppStore.js'
 import './Navigation.css'
 
 export default function Navigation() {
   const location = useLocation()
+  const { darkMode, toggleDarkMode } = useAppStore()
 
   const isActive = (path) => location.pathname === path
 
@@ -46,15 +48,22 @@ export default function Navigation() {
             <span>Chat</span>
           </Link>
           <Link
-            to="/knowledge-graph"
-            className={`nav-link ${isActive('/knowledge-graph') ? 'active' : ''}`}
+            to="/vector-3d"
+            className={`nav-link ${isActive('/vector-3d') ? 'active' : ''}`}
           >
-            <Zap size={20} />
-            <span>Graph</span>
+            <Box size={20} />
+            <span>3D Vectors</span>
           </Link>
         </div>
 
         <div className="user-menu">
+          <button 
+            className="dark-mode-toggle" 
+            onClick={toggleDarkMode}
+            aria-label="Toggle dark mode"
+          >
+            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
           <UserButton afterSignOutUrl="/" />
         </div>
       </div>

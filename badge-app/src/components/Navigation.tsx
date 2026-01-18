@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
 import { UserButton } from '@clerk/clerk-react'
-import { Home, MapPin, MessageCircle, User } from 'lucide-react'
+import { Home, MapPin, MessageCircle, User, Moon, Sun } from 'lucide-react'
+import useAppStore from '../store/useAppStore.js'
 import './Navigation.css'
 
 export default function Navigation() {
   const location = useLocation()
+  const { darkMode, toggleDarkMode } = useAppStore()
 
   const isActive = (path: string) => location.pathname === path
 
@@ -48,6 +50,13 @@ export default function Navigation() {
         </div>
 
         <div className="user-menu">
+          <button
+            className="dark-mode-toggle"
+            onClick={toggleDarkMode}
+            aria-label="Toggle dark mode"
+          >
+            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
           <UserButton afterSignOutUrl="/" />
         </div>
       </div>

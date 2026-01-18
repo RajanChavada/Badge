@@ -10,14 +10,14 @@
 
 .dashboard-header h1 {
   font-size: 2.5rem;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-weight: 700;
 }
 
 .subtitle {
   font-size: 1.1rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .stats-grid {
@@ -28,10 +28,10 @@
 }
 
 .stat-card {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 1rem;
   padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px var(--shadow-color);
   display: flex;
   gap: 1.5rem;
   align-items: flex-start;
@@ -89,7 +89,7 @@
 }
 
 .stat-content h3 {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
@@ -100,13 +100,13 @@
 .stat-number {
   font-size: 2rem;
   font-weight: 700;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 0.25rem;
 }
 
 .stat-label {
   font-size: 0.85rem;
-  color: #999;
+  color: var(--text-secondary);
 }
 
 .dashboard-sections {
@@ -117,16 +117,16 @@
 
 .quick-actions,
 .recommendations {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 1rem;
   padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .quick-actions h2,
 .recommendations h2 {
   font-size: 1.5rem;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 1.5rem;
   font-weight: 700;
 }
@@ -196,7 +196,7 @@
 }
 
 .recommendation-item h3 {
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-weight: 700;
 }
