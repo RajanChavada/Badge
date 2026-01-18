@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
-import { useQuery } from 'convex/react'
+import { useQuery, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api.js'
 import KnowledgeGraph3D from '../components/KnowledgeGraph3D.jsx'
 import { graphManager } from '../utils/knowledgeGraphManager.js'
@@ -90,8 +90,11 @@ export default function KnowledgeGraph() {
   const { user } = useUser()
   const { darkMode } = useAppStore()
   const userProfile = useQuery(api.users.getProfile, user?.id ? { clerkId: user.id } : 'skip')
+  const boothStrategyAction = useAction(api.users.generateBoothApproachStrategy)
   const [selectedNode, setSelectedNode] = useState(null)
   const [graphData, setGraphData] = useState({ nodes: [], edges: [] })
+  const [boothStrategies, setBoothStrategies] = useState(null)
+  const [loadingStrategies, setLoadingStrategies] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -141,13 +144,47 @@ export default function KnowledgeGraph() {
 
   const handleNodeClick = (nodeData) => {
     setSelectedNode(nodeData)
-
-    // If it's a booth, show more info
+    setBoothStrategies(null) // Clear any previous strategies when selecting a new node
+    // Just show the modal, don't generate strategies yet
     if (nodeData.type === 'booth') {
-      const booth = SPONSOR_BOOTHS.find((b) => b.id === nodeData.id.split('-')[1])
-      if (booth) {
-        console.log('Booth selected:', booth)
-      }
+      console.log('Booth selected:', nodeData)
+    }
+  }
+
+  const handleGenerateBoothStrategy = async (booth) => {
+    try {
+      setLoadingStrategies(true)
+      const strategies = await boothStrategyAction({
+        userProfile: {
+          name: userProfile.identity.headline || 'Student',
+          headline: userProfile.identity.headline || '',
+          skills: userProfile.identity.skills || [],
+          interests: userProfile.identity.interests || [],
+          education: userProfile.identity.education || [],
+          experience: userProfile.identity.experience || [],
+          goals: userProfile.identity.goals || [],
+          targetRoles: userProfile.identity.targetRoles || [],
+        },
+        booth: {
+          id: booth.id,
+          name: booth.name,
+          companyName: booth.companyName,
+          description: booth.description,
+          tags: booth.tags,
+        },
+      })
+      setBoothStrategies(strategies)
+      console.log('Booth strategies:', strategies)
+    } catch (error) {
+      console.error('Error generating booth strategies:', error)
+      setBoothStrategies({
+        keyStrategies: ['Error generating strategies. Please try again.'],
+        whyGood: [],
+        whatToAsk: [],
+        preparation: [],
+      })
+    } finally {
+      setLoadingStrategies(false)
     }
   }
 
@@ -159,7 +196,91 @@ export default function KnowledgeGraph() {
         </div>
       ) : null}
       
-      <KnowledgeGraph3D nodes={graphData.nodes} edges={graphData.edges} onNodeClick={handleNodeClick} />
+      <KnowledgeGraph3D 
+        nodes={graphData.nodes} 
+        edges={graphData.edges} 
+        onNodeClick={handleNodeClick}
+        onGenerateBoothStrategy={handleGenerateBoothStrategy}
+        loadingStrategies={loadingStrategies}
+        sponsorBooths={SPONSOR_BOOTHS}
+      />
+
+      {selectedNode?.type === 'booth' && boothStrategies && (
+        <div className="booth-strategies-overlay">
+          <div className="booth-strategies-modal">
+            <div className="booth-strategies-header">
+              <h2>{selectedNode.name} Booth Approach</h2>
+              <button 
+                className="close-strategies-btn"
+                onClick={() => {
+                  setSelectedNode(null)
+                  setBoothStrategies(null)
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="booth-strategies-content">
+              {loadingStrategies ? (
+                <div className="strategies-loading">
+                  <p>Generating personalized approach strategies...</p>
+                </div>
+              ) : !boothStrategies ? (
+                <div className="strategies-empty">
+                  <p>Click "Generate Strategy" to get personalized recommendations for approaching this booth.</p>
+                </div>
+              ) : (
+                <>
+                  {boothStrategies.keyStrategies && boothStrategies.keyStrategies.length > 0 && (
+                    <div className="strategy-section">
+                      <h3>Key Strategies</h3>
+                      <ul>
+                        {boothStrategies.keyStrategies.map((strategy, idx) => (
+                          <li key={idx}>{strategy}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {boothStrategies.whyGood && boothStrategies.whyGood.length > 0 && (
+                    <div className="strategy-section">
+                      <h3>Why You're a Good Fit</h3>
+                      <ul>
+                        {boothStrategies.whyGood.map((reason, idx) => (
+                          <li key={idx}>{reason}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {boothStrategies.whatToAsk && boothStrategies.whatToAsk.length > 0 && (
+                    <div className="strategy-section">
+                      <h3>Questions to Ask</h3>
+                      <ul>
+                        {boothStrategies.whatToAsk.map((question, idx) => (
+                          <li key={idx}>{question}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {boothStrategies.preparation && boothStrategies.preparation.length > 0 && (
+                    <div className="strategy-section">
+                      <h3>Preparation Steps</h3>
+                      <ul>
+                        {boothStrategies.preparation.map((step, idx) => (
+                          <li key={idx}>{step}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="graph-legend">
         <h4>Legend</h4>
