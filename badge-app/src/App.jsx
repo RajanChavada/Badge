@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react'
 import { useEffect } from 'react'
 import Navigation from './components/Navigation.jsx'
-import Dashboard from './pages/Dashboard.jsx'
 import Profile from './pages/Profile.jsx'
 import KnowledgeGraph from './pages/KnowledgeGraph.jsx'
 import Vector3D from './pages/Vector3D.jsx'
@@ -33,13 +32,12 @@ function App() {
           <Navigation />
           <main className="main-content">
             <Routes>
-              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/map" element={<KnowledgeGraph />} />
               <Route path="/live" element={<LiveConversation />} />
               <Route path="/vector-3d" element={<Vector3D />} />
               <Route path="/user/:clerkId" element={<UserProfile />} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<Navigate to="/profile" replace />} />
             </Routes>
           </main>
         </div>
