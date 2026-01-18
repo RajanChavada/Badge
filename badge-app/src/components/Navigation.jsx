@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { UserButton } from '@clerk/clerk-react'
 
-import { Home, MapPin, MessageCircle, User, Moon, Sun } from 'lucide-react'
+import { Home, MapPin, MessageCircle, User, Moon, Sun, Mic } from 'lucide-react'
 import useAppStore from '../store/useAppStore.js'
 
 import './Navigation.css'
