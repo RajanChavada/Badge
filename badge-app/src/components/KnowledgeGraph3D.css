@@ -1,0 +1,125 @@
+.knowledge-graph-container {
+  width: 100%;
+  height: 100vh;
+  position: relative;
+  background: linear-gradient(135deg, #0a0e27 0%, #16213e 100%);
+  overflow: hidden;
+}
+
+.graph-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.node-info-panel {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(16, 33, 62, 0.95);
+  border: 2px solid #4285f4;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 400px;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(66, 133, 244, 0.2);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.node-info-panel h3 {
+  margin: 0 0 12px 0;
+  font-size: 1.3em;
+  color: #4285f4;
+  font-weight: 600;
+}
+
+.node-info-panel p {
+  margin: 8px 0;
+  color: #e0e0e0;
+  font-size: 0.95em;
+  line-height: 1.4;
+}
+
+.node-info-panel strong {
+  color: #90caf9;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tag {
+  display: inline-block;
+  background: rgba(66, 133, 244, 0.2);
+  border: 1px solid #4285f4;
+  color: #90caf9;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.85em;
+  transition: all 0.2s ease;
+}
+
+.tag:hover {
+  background: rgba(66, 133, 244, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Legend/Controls */
+.graph-legend {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(16, 33, 62, 0.95);
+  border: 2px solid #4285f4;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 300px;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(66, 133, 244, 0.2);
+}
+
+.graph-legend h4 {
+  margin: 0 0 12px 0;
+  color: #4285f4;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.graph-legend ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.graph-legend li {
+  margin: 8px 0;
+  color: #e0e0e0;
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+}
+
+.graph-legend li:before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+  background: #4285f4;
+}
