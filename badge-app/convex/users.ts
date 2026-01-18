@@ -27,7 +27,7 @@ const identityValidator = v.object({
 
   experience: v.optional(v.array(v.object({
     company: v.string(),
-    role: v.string(),
+    role: v.optional(v.union(v.string(), v.null())),
     duration: v.optional(v.union(v.string(), v.null())),
     highlights: v.optional(v.union(v.array(v.string()), v.null())),
   }))),

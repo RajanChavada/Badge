@@ -4,9 +4,11 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
+import useAppStore from '../store/useAppStore.js'
 import './KnowledgeGraph3D.css'
 
 export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick = () => {} }) {
+  const { darkMode } = useAppStore()
   const containerRef = useRef(null)
   const sceneRef = useRef(null)
   const rendererRef = useRef(null)
@@ -58,7 +60,7 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
 
     // Scene setup
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color(0xf5f5f5)
+    scene.background = new THREE.Color(darkMode ? 0x1a1a1a : 0xf5f5f5)
     sceneRef.current = scene
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000)
@@ -348,10 +350,10 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
       nodesRef.current = {}
       edgesRef.current = []
     }
-  }, [nodes, edges, memoizedOnNodeClick])
+  }, [nodes, edges, memoizedOnNodeClick, darkMode])
 
   return (
-    <div className="knowledge-graph-container">
+    <div className={`knowledge-graph-container ${darkMode ? 'dark-theme' : 'light-theme'}`}>
       <div ref={containerRef} className="graph-canvas" />
       
       {/* Toggle buttons */}

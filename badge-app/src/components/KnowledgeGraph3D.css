@@ -7,6 +7,69 @@
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
+  transition: background 0.3s ease;
+}
+
+.knowledge-graph-container.dark-theme {
+  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+}
+
+.light-theme .node-info-panel,
+.light-theme .graph-legend,
+.light-theme .graph-help {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #667eea;
+  color: #1a1a1a;
+}
+
+.dark-theme .node-info-panel,
+.dark-theme .graph-legend,
+.dark-theme .graph-help {
+  background: rgba(30, 30, 30, 0.95);
+  border-color: #667eea;
+  color: #e0e0e0;
+}
+
+.dark-theme .node-info-panel h3,
+.dark-theme .graph-legend h4,
+.dark-theme .graph-help h4 {
+  color: #667eea;
+}
+
+.dark-theme .node-info-panel p,
+.dark-theme .graph-legend li,
+.dark-theme .graph-help li,
+.dark-theme .talking-point-text-inline {
+  color: #e0e0e0;
+}
+
+.dark-theme .suggested-talking-points-inline {
+  background: rgba(50, 50, 50, 0.8);
+  border-color: #444;
+}
+
+.dark-theme .talking-points-header-inline p {
+  color: #667eea;
+}
+
+.dark-theme .refresh-button-inline {
+  border-color: #667eea;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.dark-theme .refresh-button-inline:hover:not(:disabled) {
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.dark-theme .tag {
+  border-color: #667eea;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.dark-theme .tag:hover {
+  background: rgba(66, 133, 244, 0.2);
 }
 
 .graph-canvas {
