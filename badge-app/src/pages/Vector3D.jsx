@@ -25,6 +25,84 @@ const cosineSimilarity = (a, b) => {
   return dot / (Math.sqrt(normA) * Math.sqrt(normB))
 }
 
+// Simple PCA implementation for dimensionality reduction
+const simplePCA = (vectors, nComponents = 3) => {
+  if (!vectors || vectors.length < 2) return vectors.map(v => v.slice(0, 3));
+  
+  try {
+    const n = vectors.length;
+    const d = vectors[0].length;
+    
+    // Compute mean
+    const mean = new Array(d).fill(0);
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < d; j++) {
+        mean[j] += vectors[i][j];
+      }
+    }
+    for (let j = 0; j < d; j++) mean[j] /= n;
+    
+    // Center the data
+    const centered = vectors.map(v => v.map((x, j) => x - mean[j]));
+    
+    // For simplicity, use power iteration for first 3 components
+    // This is a simplified approach that works well for visualization
+    const components = [];
+    
+    for (let comp = 0; comp < Math.min(nComponents, d); comp++) {
+      let v = new Array(d).fill(0);
+      v[comp] = 1; // Initialize with a vector in the comp-th direction
+      
+      // Power iteration (simplified)
+      for (let iter = 0; iter < 5; iter++) {
+        const av = new Array(d).fill(0);
+        
+        // Compute A^T * A * v
+        for (let i = 0; i < n; i++) {
+          let dot = 0;
+          for (let j = 0; j < d; j++) dot += centered[i][j] * v[j];
+          for (let j = 0; j < d; j++) av[j] += centered[i][j] * dot;
+        }
+        
+        // Normalize
+        let norm = 0;
+        for (let j = 0; j < d; j++) norm += av[j] * av[j];
+        norm = Math.sqrt(norm);
+        if (norm > 1e-10) {
+          for (let j = 0; j < d; j++) v[j] = av[j] / norm;
+        }
+      }
+      
+      components.push(v);
+    }
+    
+    // Project data onto principal components
+    const projected = vectors.map(vec => {
+      const proj = [];
+      for (let i = 0; i < nComponents; i++) {
+        let val = 0;
+        for (let j = 0; j < d; j++) {
+          val += (vec[j] - mean[j]) * components[i][j];
+        }
+        proj.push(val);
+      }
+      return proj;
+    });
+    
+    return projected;
+  } catch (error) {
+    console.error('PCA error:', error);
+    // Fallback: just use first 3 dimensions
+    return vectors.map(v => v.slice(0, 3));
+  }
+}
+
+// Apply PCA to reduce high-dimensional vectors to 3D
+const applyPCA = (vectors) => {
+  if (!vectors || vectors.length === 0) return [];
+  return simplePCA(vectors, 3);
+}
+
 export default function Vector3D() {
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
@@ -40,8 +118,17 @@ export default function Vector3D() {
       try {
         const result = await getProfileVectors();
         if (result.success) {
-          setProfiles(result.data);
-          visualize3D(result.data);
+          // Apply PCA to convert 768D vectors to 3D
+          const pcaVectors = applyPCA(result.data.map(p => p.vector));
+          
+          // Attach PCA-reduced 3D coordinates
+          const enrichedData = result.data.map((profile, idx) => ({
+            ...profile,
+            coords3d: pcaVectors[idx] || [0, 0, 0],
+          }));
+          
+          setProfiles(enrichedData);
+          visualize3D(enrichedData);
         }
       } catch (error) {
         console.error('Error fetching vectors:', error);
@@ -197,9 +284,9 @@ export default function Vector3D() {
 
     data.forEach((profile, idx) => {
       const [x, y, z] = profile.coords3d;
-      const scaledX = x * 100;
-      const scaledY = y * 100;
-      const scaledZ = z * 100;
+      const scaledX = x * 20;
+      const scaledY = y * 20;
+      const scaledZ = z * 20;
       const position = new THREE.Vector3(scaledX, scaledY, scaledZ);
       
       // Color: green for current user, rainbow for others
