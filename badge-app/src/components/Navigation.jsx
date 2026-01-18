@@ -52,7 +52,7 @@ export default function Navigation() {
             className={`nav-link ${isActive('/vector-3d') ? 'active' : ''}`}
           >
             <Box size={20} />
-            <span>3D Vectors</span>
+            <span>Identity Graph</span>
           </Link>
         </div>
 

@@ -19,7 +19,6 @@ export default function Profile() {
   const parseResumeAction = useAction(api.resumeParser.parseResume)
   const getProfileQuery = useQuery(api.users.getProfile, user?.id ? { clerkId: user.id } : 'skip')
   const upsertProfileMutation = useMutation(api.users.upsertProfile)
-
   const { userProfile, setUserProfile } = useAppStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -101,10 +100,12 @@ export default function Profile() {
     })
   }
 
+
   const [isDragging, setIsDragging] = useState(false)
 
   const processFile = async (file) => {
     if (!file) return
+
 
     if (file.type !== 'application/pdf') {
       setError('Please upload a PDF file')
