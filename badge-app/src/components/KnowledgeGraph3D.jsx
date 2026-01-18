@@ -42,7 +42,7 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
 
     // Scene setup
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color(0x0a0e27)
+    scene.background = new THREE.Color(0xf5f5f5)
     sceneRef.current = scene
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000)
@@ -62,9 +62,9 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
 
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      1.5,  // strength
-      0.4,  // radius
-      0.85  // threshold
+      0.3,  // strength
+      0.2,  // radius
+      0.95  // threshold
     )
     composer.addPass(bloomPass)
 
@@ -72,7 +72,7 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
     scene.add(ambientLight)
 
-    const pointLight = new THREE.PointLight(0xffffff, 1)
+    const pointLight = new THREE.PointLight(0xffffff, 0.8)
     pointLight.position.set(50, 50, 50)
     pointLight.castShadow = true
     scene.add(pointLight)
@@ -92,13 +92,13 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
     
     nodes.forEach((node, idx) => {
       // Create visible geometry
-      const geometry = new THREE.IcosahedronGeometry(3, 2)
+      const geometry = new THREE.IcosahedronGeometry(6, 3)
       const material = new THREE.MeshStandardMaterial({
-        color: node.color || 0x4285f4,
-        metalness: 0.3,
-        roughness: 0.4,
-        emissive: node.color || 0x4285f4,
-        emissiveIntensity: 0.2,
+        color: node.color || 0x667eea,
+        metalness: 0.1,
+        roughness: 0.6,
+        emissive: node.color || 0x667eea,
+        emissiveIntensity: 0.6,
       })
 
       const mesh = new THREE.Mesh(geometry, material)
@@ -144,10 +144,10 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
         ))
 
         const material = new THREE.LineBasicMaterial({
-          color: edge.color || 0x888888,
-          linewidth: 1,
+          color: edge.color || 0x999999,
+          linewidth: 2,
           transparent: true,
-          opacity: 0.3,
+          opacity: 0.5,
         })
 
         const line = new THREE.Line(geometry, material)
