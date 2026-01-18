@@ -71,6 +71,13 @@
   color: var(--text-primary);
 }
 
+.headline {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0 1rem;
+  font-weight: 500;
+}
+
 .contact-info {
   display: flex;
   align-items: center;
@@ -104,6 +111,107 @@
   white-space: pre-wrap;
 }
 
+.summary {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.education-item,
+.experience-item,
+.project-item {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.education-item:last-child,
+.experience-item:last-child,
+.project-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.education-item h3,
+.experience-item h3,
+.project-item h3 {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem;
+}
+
+.degree,
+.company {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin: 0.25rem 0;
+  font-weight: 500;
+}
+
+.education-details {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.detail,
+.duration {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.duration {
+  margin: 0.25rem 0 0.5rem;
+}
+
+.highlights {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.highlights li {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+
+.project-desc {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+.project-link {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: #667eea;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.project-link:hover {
+  text-decoration: underline;
+}
+
+.goals-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.goals-list li {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+  text-transform: capitalize;
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;
@@ -117,6 +225,30 @@
   border-radius: 20px;
   font-size: 0.85rem;
   color: var(--text-primary);
+}
+
+.skill-tag {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.3);
+  color: #667eea;
+}
+
+.tech-tag {
+  background: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.3);
+  color: #4CAF50;
+}
+
+.target-tag {
+  background: rgba(255, 152, 0, 0.1);
+  border-color: rgba(255, 152, 0, 0.3);
+  color: #ff9800;
+}
+
+.availability-tag {
+  background: rgba(156, 39, 176, 0.1);
+  border-color: rgba(156, 39, 176, 0.3);
+  color: #9c27b0;
 }
 
 .resume-text {

@@ -1,9 +1,29 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAction } from 'convex/react';
 import { useUser } from '@clerk/clerk-react';
 import { api } from '../../convex/_generated/api';
 import '../styles/Vector3D.css';
+
+const cosineSimilarity = (a, b) => {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return null
+
+  let dot = 0
+  let normA = 0
+  let normB = 0
+
+  for (let i = 0; i < a.length; i += 1) {
+    const x = a[i]
+    const y = b[i]
+    if (typeof x !== 'number' || typeof y !== 'number') return null
+    dot += x * y
+    normA += x * x
+    normB += y * y
+  }
+
+  if (normA === 0 || normB === 0) return null
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB))
+}
 
 export default function Vector3D() {
   const mountRef = useRef(null);
@@ -347,27 +367,116 @@ export default function Vector3D() {
     };
   };
 
+  // Calculate similarity rankings
+  const rankings = useMemo(() => {
+    if (!user?.id || profiles.length === 0) return []
+
+    const currentProfile = profiles.find(p => p.clerkId === user.id)
+    if (!currentProfile || !currentProfile.vector) return []
+
+    const others = profiles.filter(p => p.clerkId !== user.id)
+    const ranked = others
+      .map(p => {
+        // Find original index to get the same color as in 3D view
+        const originalIdx = profiles.findIndex(prof => prof.clerkId === p.clerkId)
+        const hue = originalIdx / Math.max(profiles.length, 1)
+        const color = `hsl(${hue * 360}, 80%, 60%)`
+        
+        return {
+          ...p,
+          similarity: cosineSimilarity(currentProfile.vector, p.vector) || 0,
+          color: color
+        }
+      })
+      .sort((a, b) => b.similarity - a.similarity)
+
+    return ranked
+  }, [profiles, user?.id])
+
   return (
-    <div ref={mountRef} className="vector-3d-container">
-      {loading && <div className="loader">Loading vectors...</div>}
-      <div className="info-panel">
-        <h2>3D Vector Visualization</h2>
-        <p>Profiles: {profiles.length}</p>
-      </div>
-      
-      {selectedProfile && (
-        <div className="profile-popup">
-          <div className="popup-content">
-            <button className="close-btn" onClick={() => setSelectedProfile(null)}>×</button>
-            <h3>
-              {selectedProfile.name}
-              {selectedProfile.clerkId === user?.id && <span className="me-badge"> (You)</span>}
-            </h3>
-            <p><strong>Clerk ID:</strong> {selectedProfile.clerkId}</p>
-            <p><strong>Coordinates:</strong> [{selectedProfile.coords3d.map(c => c.toFixed(4)).join(', ')}]</p>
+    <div className="vector-3d-page">
+      <div className="split-container">
+        {/* Left side: 3D Visualization */}
+        <div ref={mountRef} className="vector-3d-container">
+          {loading && <div className="loader">Loading vectors...</div>}
+          <div className="info-panel">
+            <h2>3D Vector Visualization</h2>
+            <p>Profiles: {profiles.length}</p>
           </div>
+          
+          {selectedProfile && (
+            <div className="profile-popup">
+              <div className="popup-content">
+                <button className="close-btn" onClick={() => setSelectedProfile(null)}>×</button>
+                <h3>
+                  {selectedProfile.name}
+                  {selectedProfile.clerkId === user?.id && <span className="me-badge"> (You)</span>}
+                </h3>
+                <p><strong>Clerk ID:</strong> {selectedProfile.clerkId}</p>
+                <p><strong>Coordinates:</strong> [{selectedProfile.coords3d.map(c => c.toFixed(4)).join(', ')}]</p>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Right side: Similarity Ranking */}
+        <div className="similarity-panel">
+          <div className="similarity-header">
+            <h2>Similarity Ranking</h2>
+            <p>Cosine similarity to your profile</p>
+          </div>
+
+          {loading ? (
+            <div className="loader">Loading...</div>
+          ) : rankings.length === 0 ? (
+            <div className="empty-state">No other profiles to compare</div>
+          ) : (
+            <div className="similarity-content">
+              <div className="summary-stats">
+                <div className="stat">
+                  <span className="stat-label">Top Match</span>
+                  <span className="stat-value">{rankings[0]?.name || 'Unknown'}</span>
+                  <span className="stat-detail">{(rankings[0]?.similarity * 100).toFixed(1)}% similar</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-label">Total Users</span>
+                  <span className="stat-value">{rankings.length}</span>
+                </div>
+              </div>
+
+              <div className="rankings-list">
+                {rankings.slice(0, 10).map((profile, idx) => (
+                  <div 
+                    key={profile.clerkId} 
+                    className="ranking-item"
+                    onClick={() => navigate(`/user/${profile.clerkId}`)}
+                  >
+                    <div className="rank-number" style={{ color: profile.color }}>#{idx + 1}</div>
+                    <div className="rank-info">
+                      <div className="rank-name">{profile.name || 'Unknown'}</div>
+                      <div className="rank-id">{profile.clerkId}</div>
+                    </div>
+                    <div className="rank-similarity">
+                      <div className="similarity-bar">
+                        <div 
+                          className="similarity-fill" 
+                          style={{ 
+                            width: `${profile.similarity * 100}%`,
+                            background: profile.color
+                          }}
+                        ></div>
+                      </div>
+                      <span className="similarity-text" style={{ color: profile.color }}>
+                        {(profile.similarity * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
