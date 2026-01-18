@@ -518,6 +518,12 @@
   border-color: #667eea;
 }
 
+:root[data-theme="dark"] .tag.selected {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
 .preview-header {
   display: flex;
   align-items: center;
