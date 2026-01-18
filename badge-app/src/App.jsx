@@ -7,6 +7,7 @@ import Profile from './pages/Profile.jsx'
 import Map from './pages/Map.jsx'
 import ChatInterface from './pages/ChatInterface.jsx'
 import Vector3D from './pages/Vector3D.jsx'
+import SimilarityRanking from './pages/SimilarityRanking.jsx'
 import useAppStore from './store/useAppStore.js'
 import './App.css'
 
@@ -32,6 +33,7 @@ function App() {
               <Route path="/map" element={<Map />} />
               <Route path="/chat" element={<ChatInterface />} />
               <Route path="/vector-3d" element={<Vector3D />} />
+              <Route path="/similarity" element={<SimilarityRanking />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </main>

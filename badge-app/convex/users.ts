@@ -104,6 +104,8 @@ export const getProfileVectors = action({
         LIMIT 100;
       `
 
+      console.log('[Snowflake] Using warehouse:', warehouse)
+      
       const response = await fetch(snowflakeUrl, {
         method: 'POST',
         headers,
@@ -111,7 +113,7 @@ export const getProfileVectors = action({
           statement: sql,
           timeout: 60,
           database: database,
-          warehouse: warehouse,
+          schema: 'profiles',
         }),
       })
 

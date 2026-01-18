@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { UserButton } from '@clerk/clerk-react'
-import { Home, MapPin, MessageCircle, User, Moon, Sun, Box } from 'lucide-react'
+import { Home, MapPin, MessageCircle, User, Moon, Sun, Box, BarChart3 } from 'lucide-react'
 import useAppStore from '../store/useAppStore.js'
 import './Navigation.css'
 
@@ -53,6 +53,13 @@ export default function Navigation() {
           >
             <Box size={20} />
             <span>3D Vectors</span>
+          </Link>
+          <Link
+            to="/similarity"
+            className={`nav-link ${isActive('/similarity') ? 'active' : ''}`}
+          >
+            <BarChart3 size={20} />
+            <span>Similarity</span>
           </Link>
         </div>
 
