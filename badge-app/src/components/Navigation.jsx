@@ -15,8 +15,7 @@ export default function Navigation() {
     <nav className="navbar">
       <div className="navbar-container">
         <Link to="/dashboard" className="navbar-brand">
-          <span className="brand-icon">🎯</span>
-          <span className="brand-text">Badge</span>
+          <img src="/badge-logo.png" alt="Badge" className="brand-logo" />
         </Link>
 
         <div className="nav-links">
