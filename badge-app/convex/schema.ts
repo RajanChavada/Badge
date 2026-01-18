@@ -53,9 +53,11 @@ export default defineSchema({
     email: v.string(),
     name: v.string(),
     resumeText: v.optional(v.string()),
+    resumeFileId: v.optional(v.string()),
     identity: v.optional(v.any()),
+    identityVersion: v.optional(v.number()),
     createdAt: v.number(),
-    updatedAt: v.number(),
+    updatedAt: v.optional(v.number()),
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_email", ["email"]),

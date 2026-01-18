@@ -1,9 +1,107 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAction } from 'convex/react';
 import { useUser } from '@clerk/clerk-react';
 import { api } from '../../convex/_generated/api';
 import '../styles/Vector3D.css';
+
+const cosineSimilarity = (a, b) => {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return null
+
+  let dot = 0
+  let normA = 0
+  let normB = 0
+
+  for (let i = 0; i < a.length; i += 1) {
+    const x = a[i]
+    const y = b[i]
+    if (typeof x !== 'number' || typeof y !== 'number') return null
+    dot += x * y
+    normA += x * x
+    normB += y * y
+  }
+
+  if (normA === 0 || normB === 0) return null
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB))
+}
+
+// Simple PCA implementation for dimensionality reduction
+const simplePCA = (vectors, nComponents = 3) => {
+  if (!vectors || vectors.length < 2) return vectors.map(v => v.slice(0, 3));
+  
+  try {
+    const n = vectors.length;
+    const d = vectors[0].length;
+    
+    // Compute mean
+    const mean = new Array(d).fill(0);
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < d; j++) {
+        mean[j] += vectors[i][j];
+      }
+    }
+    for (let j = 0; j < d; j++) mean[j] /= n;
+    
+    // Center the data
+    const centered = vectors.map(v => v.map((x, j) => x - mean[j]));
+    
+    // For simplicity, use power iteration for first 3 components
+    // This is a simplified approach that works well for visualization
+    const components = [];
+    
+    for (let comp = 0; comp < Math.min(nComponents, d); comp++) {
+      let v = new Array(d).fill(0);
+      v[comp] = 1; // Initialize with a vector in the comp-th direction
+      
+      // Power iteration (simplified)
+      for (let iter = 0; iter < 5; iter++) {
+        const av = new Array(d).fill(0);
+        
+        // Compute A^T * A * v
+        for (let i = 0; i < n; i++) {
+          let dot = 0;
+          for (let j = 0; j < d; j++) dot += centered[i][j] * v[j];
+          for (let j = 0; j < d; j++) av[j] += centered[i][j] * dot;
+        }
+        
+        // Normalize
+        let norm = 0;
+        for (let j = 0; j < d; j++) norm += av[j] * av[j];
+        norm = Math.sqrt(norm);
+        if (norm > 1e-10) {
+          for (let j = 0; j < d; j++) v[j] = av[j] / norm;
+        }
+      }
+      
+      components.push(v);
+    }
+    
+    // Project data onto principal components
+    const projected = vectors.map(vec => {
+      const proj = [];
+      for (let i = 0; i < nComponents; i++) {
+        let val = 0;
+        for (let j = 0; j < d; j++) {
+          val += (vec[j] - mean[j]) * components[i][j];
+        }
+        proj.push(val);
+      }
+      return proj;
+    });
+    
+    return projected;
+  } catch (error) {
+    console.error('PCA error:', error);
+    // Fallback: just use first 3 dimensions
+    return vectors.map(v => v.slice(0, 3));
+  }
+}
+
+// Apply PCA to reduce high-dimensional vectors to 3D
+const applyPCA = (vectors) => {
+  if (!vectors || vectors.length === 0) return [];
+  return simplePCA(vectors, 3);
+}
 
 export default function Vector3D() {
   const mountRef = useRef(null);
@@ -20,8 +118,17 @@ export default function Vector3D() {
       try {
         const result = await getProfileVectors();
         if (result.success) {
-          setProfiles(result.data);
-          visualize3D(result.data);
+          // Apply PCA to convert 768D vectors to 3D
+          const pcaVectors = applyPCA(result.data.map(p => p.vector));
+          
+          // Attach PCA-reduced 3D coordinates
+          const enrichedData = result.data.map((profile, idx) => ({
+            ...profile,
+            coords3d: pcaVectors[idx] || [0, 0, 0],
+          }));
+          
+          setProfiles(enrichedData);
+          visualize3D(enrichedData);
         }
       } catch (error) {
         console.error('Error fetching vectors:', error);
@@ -177,9 +284,9 @@ export default function Vector3D() {
 
     data.forEach((profile, idx) => {
       const [x, y, z] = profile.coords3d;
-      const scaledX = x * 100;
-      const scaledY = y * 100;
-      const scaledZ = z * 100;
+      const scaledX = x * 20;
+      const scaledY = y * 20;
+      const scaledZ = z * 20;
       const position = new THREE.Vector3(scaledX, scaledY, scaledZ);
       
       // Color: green for current user, rainbow for others
@@ -347,27 +454,116 @@ export default function Vector3D() {
     };
   };
 
+  // Calculate similarity rankings
+  const rankings = useMemo(() => {
+    if (!user?.id || profiles.length === 0) return []
+
+    const currentProfile = profiles.find(p => p.clerkId === user.id)
+    if (!currentProfile || !currentProfile.vector) return []
+
+    const others = profiles.filter(p => p.clerkId !== user.id)
+    const ranked = others
+      .map(p => {
+        // Find original index to get the same color as in 3D view
+        const originalIdx = profiles.findIndex(prof => prof.clerkId === p.clerkId)
+        const hue = originalIdx / Math.max(profiles.length, 1)
+        const color = `hsl(${hue * 360}, 80%, 60%)`
+        
+        return {
+          ...p,
+          similarity: cosineSimilarity(currentProfile.vector, p.vector) || 0,
+          color: color
+        }
+      })
+      .sort((a, b) => b.similarity - a.similarity)
+
+    return ranked
+  }, [profiles, user?.id])
+
   return (
-    <div ref={mountRef} className="vector-3d-container">
-      {loading && <div className="loader">Loading vectors...</div>}
-      <div className="info-panel">
-        <h2>3D Vector Visualization</h2>
-        <p>Profiles: {profiles.length}</p>
-      </div>
-      
-      {selectedProfile && (
-        <div className="profile-popup">
-          <div className="popup-content">
-            <button className="close-btn" onClick={() => setSelectedProfile(null)}>×</button>
-            <h3>
-              {selectedProfile.name}
-              {selectedProfile.clerkId === user?.id && <span className="me-badge"> (You)</span>}
-            </h3>
-            <p><strong>Clerk ID:</strong> {selectedProfile.clerkId}</p>
-            <p><strong>Coordinates:</strong> [{selectedProfile.coords3d.map(c => c.toFixed(4)).join(', ')}]</p>
+    <div className="vector-3d-page">
+      <div className="split-container">
+        {/* Left side: 3D Visualization */}
+        <div ref={mountRef} className="vector-3d-container">
+          {loading && <div className="loader">Loading vectors...</div>}
+          <div className="info-panel">
+            <h2>3D Vector Visualization</h2>
+            <p>Profiles: {profiles.length}</p>
           </div>
+          
+          {selectedProfile && (
+            <div className="profile-popup">
+              <div className="popup-content">
+                <button className="close-btn" onClick={() => setSelectedProfile(null)}>×</button>
+                <h3>
+                  {selectedProfile.name}
+                  {selectedProfile.clerkId === user?.id && <span className="me-badge"> (You)</span>}
+                </h3>
+                <p><strong>Clerk ID:</strong> {selectedProfile.clerkId}</p>
+                <p><strong>Coordinates:</strong> [{selectedProfile.coords3d.map(c => c.toFixed(4)).join(', ')}]</p>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Right side: Similarity Ranking */}
+        <div className="similarity-panel">
+          <div className="similarity-header">
+            <h2>Similarity Ranking</h2>
+            <p>Cosine similarity to your profile</p>
+          </div>
+
+          {loading ? (
+            <div className="loader">Loading...</div>
+          ) : rankings.length === 0 ? (
+            <div className="empty-state">No other profiles to compare</div>
+          ) : (
+            <div className="similarity-content">
+              <div className="summary-stats">
+                <div className="stat">
+                  <span className="stat-label">Top Match</span>
+                  <span className="stat-value">{rankings[0]?.name || 'Unknown'}</span>
+                  <span className="stat-detail">{(rankings[0]?.similarity * 100).toFixed(1)}% similar</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-label">Total Users</span>
+                  <span className="stat-value">{rankings.length}</span>
+                </div>
+              </div>
+
+              <div className="rankings-list">
+                {rankings.slice(0, 10).map((profile, idx) => (
+                  <div 
+                    key={profile.clerkId} 
+                    className="ranking-item"
+                    onClick={() => navigate(`/user/${profile.clerkId}`)}
+                  >
+                    <div className="rank-number" style={{ color: profile.color }}>#{idx + 1}</div>
+                    <div className="rank-info">
+                      <div className="rank-name">{profile.name || 'Unknown'}</div>
+                      <div className="rank-id">{profile.clerkId}</div>
+                    </div>
+                    <div className="rank-similarity">
+                      <div className="similarity-bar">
+                        <div 
+                          className="similarity-fill" 
+                          style={{ 
+                            width: `${profile.similarity * 100}%`,
+                            background: profile.color
+                          }}
+                        ></div>
+                      </div>
+                      <span className="similarity-text" style={{ color: profile.color }}>
+                        {(profile.similarity * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

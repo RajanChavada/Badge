@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation, useQuery, useAction } from 'convex/react'
 import useAppStore from '../store/useAppStore.js'
 import { api } from '../../convex/_generated/api.js'
 import { extractTextFromPDF } from '../utils/pdfParser.js'
@@ -18,6 +18,8 @@ export default function Profile() {
   const upsertProfileMutation = useMutation(api.users.upsertProfile)
   const generateResumeUploadUrlMutation = useMutation(api.users.generateResumeUploadUrl)
   const saveResumeFileIdMutation = useMutation(api.users.saveResumeFileId)
+  const parseResumeAction = useAction(api.resumeParser.parseResume)
+  const vectorizeAction = useAction(api.users.vectorizeProfileInSnowflake)
   const { userProfile, setUserProfile } = useAppStore()
   const [isEditing, setIsEditing] = useState(!userProfile)
   const [formData, setFormData] = useState({
@@ -134,7 +136,32 @@ export default function Profile() {
             lookingFor: result.identity.lookingFor || prev.lookingFor,
           }))
 
-          setStatus('✅ Resume analyzed! Review your profile and click Save.')
+          setStatus('✅ Resume analyzed! Now vectorizing in Snowflake...')
+
+          // Step 3: Vectorize profile in Snowflake
+          try {
+            const educationSummary = result.identity.education?.map(e => 
+              `${e.degree || ''} ${e.field || ''} at ${e.institution}`.trim()
+            ).join('; ') || ''
+
+            const vectorizeResult = await vectorizeAction({
+              clerkId: user?.id || '',
+              name: user?.fullName || formData.name,
+              education: educationSummary,
+              interests: result.identity.interests || [],
+              resumeText: extractedText,
+            })
+
+            if (vectorizeResult.success) {
+              setStatus('✅ Resume analyzed and vectorized! Review your profile and click Save.')
+            } else {
+              setStatus('✅ Resume analyzed! (Vectorization pending - will retry on save)')
+              console.warn('[Vectorize] Failed:', vectorizeResult.reason)
+            }
+          } catch (vecErr) {
+            console.error('[Vectorize] Error:', vecErr)
+            setStatus('✅ Resume analyzed! (Vectorization pending - will retry on save)')
+          }
         } else {
           setError(result.error || 'AI parsing failed. You can still fill in your profile manually.')
           setStatus('')
