@@ -15,6 +15,7 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
   const edgesRef = useRef([])
   const hoveredNodeRef = useRef(null)
   const sceneInitializedRef = useRef(false)
+  const animationFrameIdRef = useRef(null)
   const [selectedNode, setSelectedNode] = useState(null)
 
   // Memoize the onNodeClick callback
@@ -23,9 +24,18 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
   useEffect(() => {
     if (!containerRef.current || nodes.length === 0) return
 
-    // Skip reinitializing if scene already exists and nodes haven't changed
+    // Clean up previous scene if nodes have changed
     if (sceneInitializedRef.current && sceneRef.current) {
-      return
+      // Only skip reinitializing if scene exists AND has the same number of nodes
+      if (nodesRef.current && Object.keys(nodesRef.current).length === nodes.length) {
+        return
+      }
+      
+      // Otherwise, clean up the old scene
+      if (rendererRef.current && containerRef.current.contains(rendererRef.current.domElement)) {
+        containerRef.current.removeChild(rendererRef.current.domElement)
+      }
+      sceneInitializedRef.current = false
     }
 
     console.log('Rendering graph with nodes:', nodes)
@@ -200,7 +210,7 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
 
     // Animation loop
     const animate = () => {
-      requestAnimationFrame(animate)
+      animationFrameIdRef.current = requestAnimationFrame(animate)
       controls.update()
 
       // Gentle rotation of nodes
@@ -228,13 +238,25 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
     window.addEventListener('resize', onWindowResize)
 
     return () => {
+      // Cancel animation frame
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current)
+      }
+
       window.removeEventListener('resize', onWindowResize)
       renderer.domElement.removeEventListener('click', onMouseClick)
       renderer.domElement.removeEventListener('mousemove', onMouseMove)
       renderer.dispose()
-      containerRef.current?.removeChild(renderer.domElement)
+      if (containerRef.current && containerRef.current.contains(renderer.domElement)) {
+        containerRef.current.removeChild(renderer.domElement)
+      }
+      
+      // Reset scene state
+      sceneInitializedRef.current = false
+      nodesRef.current = {}
+      edgesRef.current = []
     }
-  }, [nodes, edges])
+  }, [nodes, edges, memoizedOnNodeClick])
 
   return (
     <div className="knowledge-graph-container">
