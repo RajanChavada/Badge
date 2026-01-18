@@ -419,3 +419,112 @@ Resume: ${args.resumeText || ''}
   },
 });
 
+export const generateConversationTalkingPoints = action({
+  args: {
+    myProfile: v.any(),
+    theirProfile: v.any(),
+  },
+  handler: async (_, args) => {
+    const geminiKey = process.env.GEMINI_API_KEY;
+    if (!geminiKey) {
+      throw new Error('GEMINI_API_KEY not configured');
+    }
+
+    const myIdentity = args.myProfile?.identity || {};
+    const theirIdentity = args.theirProfile?.identity || {};
+
+    const myEducation = myIdentity.education?.map((e: any) => `${e.degree} in ${e.field} from ${e.institution}`).join('; ') || 'N/A';
+    const myExperience = myIdentity.experience?.map((e: any) => `${e.role} at ${e.company}`).join('; ') || 'N/A';
+    const theirEducation = theirIdentity.education?.map((e: any) => `${e.degree} in ${e.field} from ${e.institution}`).join('; ') || 'N/A';
+    const theirExperience = theirIdentity.experience?.map((e: any) => `${e.role} at ${e.company}`).join('; ') || 'N/A';
+
+    const prompt = `You are a helpful conversation assistant. Given two people's profiles, generate talking points to help them start a meaningful conversation.
+
+MY PROFILE:
+- Name: ${args.myProfile?.name || 'Unknown'}
+- Headline: ${myIdentity.headline || 'N/A'}
+- Summary: ${myIdentity.summary || 'N/A'}
+- Skills: ${myIdentity.skills?.join(', ') || 'N/A'}
+- Interests: ${myIdentity.interests?.join(', ') || 'N/A'}
+- Education: ${myEducation}
+- Experience: ${myExperience}
+- Goals: ${myIdentity.goals?.join(', ') || 'N/A'}
+
+THEIR PROFILE:
+- Name: ${args.theirProfile?.name || 'Unknown'}
+- Headline: ${theirIdentity.headline || 'N/A'}
+- Summary: ${theirIdentity.summary || 'N/A'}
+- Skills: ${theirIdentity.skills?.join(', ') || 'N/A'}
+- Interests: ${theirIdentity.interests?.join(', ') || 'N/A'}
+- Education: ${theirEducation}
+- Experience: ${theirExperience}
+- Goals: ${theirIdentity.goals?.join(', ') || 'N/A'}
+
+Generate a JSON response with the following structure:
+{
+  "commonInterests": ["list of shared interests or overlapping goals (MAX 3 things EACH THING MAX 5 WORDS)"],
+  "complementarySkills": ["ways their skills complement mine(MAX 3 things  EACH THING MAX 20 WORDS)"],
+  "questions": ["thoughtful questions to ask them(MAX 3 questions ATLEAST ONE SHOULD BE NON WORK RELATED about hobbies or something wierd  EACH THING QUICK and ALLOW FOR FOLLOW UPS)"],
+  "suggestions": ["suggestions for collaboration or conversation starters(MAX 3 things EACH THING MAX 10 WORDS)"]
+}
+
+Make the suggestions specific, actionable, and genuine.`;
+
+    try {
+      const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+        {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': geminiKey,
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }],
+          }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Gemini API error:', response.status, errorData);
+        throw new Error(`Gemini API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Gemini response:', JSON.stringify(data, null, 2));
+      
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      
+      if (!content) {
+        console.error('No content in Gemini response. Full response:', JSON.stringify(data));
+        return {
+          commonInterests: ['Could not generate talking points. Please try again.'],
+          complementarySkills: [],
+          questions: [],
+          suggestions: [],
+        };
+      }
+      
+      // Extract JSON from the response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.log('Could not parse JSON from Gemini content:', content);
+        // Try to return a default response structure
+        return {
+          commonInterests: [content],
+          complementarySkills: [],
+          questions: [],
+          suggestions: [],
+        };
+      }
+
+      const talkingPoints = JSON.parse(jsonMatch[0]);
+      return talkingPoints;
+    } catch (error) {
+      console.error('Error generating talking points:', error);
+      throw error;
+    }
+  },
+});

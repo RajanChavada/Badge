@@ -323,6 +323,147 @@
   overflow-y: auto;
 }
 
+/* Modal Action Bar */
+.modal-action-bar {
+  padding: 16px 32px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  gap: 12px;
+}
+
+:root[data-theme="dark"] .modal-action-bar {
+  border-color: #333;
+}
+
+.btn-talking-points {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+}
+
+.btn-talking-points:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-talking-points:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Talking Points Section */
+.talking-points-section {
+  padding: 24px 32px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 24px;
+}
+
+:root[data-theme="dark"] .talking-points-section {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-color: #333;
+}
+
+.talking-points-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.talking-points-header svg {
+  color: rgb(102, 126, 234);
+}
+
+.talking-points-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+  flex: 1;
+}
+
+:root[data-theme="dark"] .talking-points-header h3 {
+  color: #fff;
+}
+
+.btn-close-small {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.btn-close-small:hover {
+  color: #333;
+}
+
+:root[data-theme="dark"] .btn-close-small:hover {
+  color: #fff;
+}
+
+.talking-points-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.talking-point-group {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  border-left: 4px solid rgb(102, 126, 234);
+}
+
+:root[data-theme="dark"] .talking-point-group {
+  background: #1e1e1e;
+  border-left-color: rgb(102, 126, 234);
+}
+
+.talking-point-group h4 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #333;
+}
+
+:root[data-theme="dark"] .talking-point-group h4 {
+  color: #fff;
+}
+
+.talking-point-group ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.talking-point-group li {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.talking-point-group li:last-child {
+  margin-bottom: 0;
+}
+
+:root[data-theme="dark"] .talking-point-group li {
+  color: #ccc;
+}
+
 /* Profile Section in Modal */
 .profile-section {
   margin-bottom: 2rem;

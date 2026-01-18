@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from 'convex/react';
+import { useQuery, useAction } from 'convex/react';
+import { useUser } from '@clerk/clerk-react';
 import { api } from '../../convex/_generated/api';
-import { ArrowLeft, Mail, Briefcase, GraduationCap, Target, Code, User, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, Mail, Briefcase, GraduationCap, Target, Code, User, Sparkles, X, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Tilt from 'react-parallax-tilt';
 import './UserProfile.css';
@@ -10,15 +11,38 @@ import './UserProfile.css';
 export default function UserProfile() {
   const { clerkId } = useParams();
   const navigate = useNavigate();
+  const { user: currentUser } = useUser();
   const profile = useQuery(api.users.getProfile, { clerkId });
+  const currentUserProfile = useQuery(api.users.getProfile, currentUser?.id ? { clerkId: currentUser.id } : 'skip');
+  const generateTalkingPointsAction = useAction(api.users.generateConversationTalkingPoints);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [talkingPoints, setTalkingPoints] = useState(null);
+  const [loadingTalkingPoints, setLoadingTalkingPoints] = useState(false);
 
   useEffect(() => {
     if (profile !== undefined) {
       setLoading(false);
     }
   }, [profile]);
+
+  const handleGenerateTalkingPoints = async () => {
+    if (!currentUserProfile) return;
+    
+    setLoadingTalkingPoints(true);
+    try {
+      const result = await generateTalkingPointsAction({
+        myProfile: currentUserProfile,
+        theirProfile: profile,
+      });
+      setTalkingPoints(result);
+    } catch (err) {
+      console.error('Error generating talking points:', err);
+      setTalkingPoints(null);
+    } finally {
+      setLoadingTalkingPoints(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -121,6 +145,76 @@ export default function UserProfile() {
                   <X size={20} />
                 </button>
               </div>
+
+              {!talkingPoints && (
+                <div className="modal-action-bar">
+                  <button 
+                    className="btn-talking-points"
+                    onClick={handleGenerateTalkingPoints}
+                    disabled={loadingTalkingPoints}
+                  >
+                    <Lightbulb size={18} />
+                    {loadingTalkingPoints ? 'Generating...' : 'Get Talking Points'}
+                  </button>
+                </div>
+              )}
+
+              {talkingPoints && (
+                <div className="talking-points-section">
+                  <div className="talking-points-header">
+                    <Lightbulb size={20} />
+                    <h3>Conversation Talking Points</h3>
+                    <button 
+                      className="btn-close-small"
+                      onClick={() => setTalkingPoints(null)}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="talking-points-content">
+                    {talkingPoints.commonInterests && talkingPoints.commonInterests.length > 0 && (
+                      <div className="talking-point-group">
+                        <h4>🎯 Common Interests</h4>
+                        <ul>
+                          {talkingPoints.commonInterests.map((point, idx) => (
+                            <li key={idx}>{point}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {talkingPoints.complementarySkills && talkingPoints.complementarySkills.length > 0 && (
+                      <div className="talking-point-group">
+                        <h4>⚡ Complementary Skills</h4>
+                        <ul>
+                          {talkingPoints.complementarySkills.map((point, idx) => (
+                            <li key={idx}>{point}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {talkingPoints.questions && talkingPoints.questions.length > 0 && (
+                      <div className="talking-point-group">
+                        <h4>❓ Questions to Ask</h4>
+                        <ul>
+                          {talkingPoints.questions.map((point, idx) => (
+                            <li key={idx}>{point}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {talkingPoints.suggestions && talkingPoints.suggestions.length > 0 && (
+                      <div className="talking-point-group">
+                        <h4>💡 Suggestions</h4>
+                        <ul>
+                          {talkingPoints.suggestions.map((point, idx) => (
+                            <li key={idx}>{point}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="modal-body">
                 {/* About Section */}
