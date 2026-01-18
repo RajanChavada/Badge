@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { useAction, useMutation, useQuery } from 'convex/react'
-import { useAppStore } from '../store/useAppStore.js'
+import useAppStore from '../store/useAppStore.js'
 
 import { api } from '../../convex/_generated/api.js'
 import { extractTextFromPDF } from '../utils/pdfParser.js'

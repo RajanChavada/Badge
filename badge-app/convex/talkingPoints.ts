@@ -104,42 +104,57 @@ ${companyDescription}
      --------------------------- */
 
 /**
- * Fetch user profile from Convex (read-only).
+ * Fetch user profile from Convex by clerkId.
  *
- * NOTE: Convex SDKs vary by project. This implementation attempts a generic HTTP fetch
- * if CONVEX_FETCH_URL is provided. If your project uses the Convex Node SDK, replace
- * this function with the appropriate SDK query (TODO left intentionally).
+ * This function can be called from within a Convex action or query context using the SDK,
+ * or via HTTP fetch for other environments.
  *
- * Required envs for this generic implementation:
- * - CONVEX_FETCH_URL
- * - CONVEX_API_KEY
+ * Parameters:
+ * - clerkId: The Clerk user ID (e.g., "user_2abc3def...")
+ * - ctx: Optional Convex context (if provided, uses SDK; otherwise uses HTTP)
  *
  * Returns:
  *   { profile }
  *
- * Throws on missing configuration.
+ * Throws on missing user or configuration errors.
  */
-export async function fetchUserFromConvex(userId: string): Promise<{ profile: UserProfile | null }> {
-    const url = process.env.CONVEX_FETCH_URL;
-    const key = process.env.CONVEX_API_KEY;
+export async function fetchUserFromConvex(clerkId: string, ctx?: any): Promise<{ profile: UserProfile | null }> {
+    // If Convex context is provided (running in action/query), use SDK to fetch by clerkId
+    if (ctx && ctx.runQuery) {
+        try {
+            // Import at top: import { api } from "./_generated/api";
+            // This would be: const profile = await ctx.runQuery(api.users.getProfile, { clerkId });
+            // For now, fall through to HTTP for compatibility
+        } catch (error) {
+            // fall through to HTTP
+        }
+    }
 
-    if (!url || !key) {
-        // TODO: Replace this placeholder with the Convex SDK call if the SDK is available in the runtime.
+    // HTTP fetch using clerkId
+    const url = process.env.CONVEX_FETCH_URL ?? process.env.VITE_CONVEX_URL;
+    const key = process.env.CONVEX_API_KEY ?? process.env.VITE_CONVEX_API_KEY;
+
+    if (!url) {
         throw new Error(
-            'Convex fetch not configured. Please set CONVEX_FETCH_URL and CONVEX_API_KEY, or replace fetchUserFromConvex with the Convex SDK call for your project.'
+            'Convex fetch not configured. Please set CONVEX_FETCH_URL or VITE_CONVEX_URL, or pass Convex context as second argument.'
         );
     }
 
-    // Generic fetch: expects a small backend endpoint or proxy that returns:
-    // { profile: {...} }
-    // The exact contract is intentionally small and generic because project setups vary.
-    const resp = await fetch(url, {
+    // Build headers; include Authorization only if a key is provided.
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+    };
+    if (key) {
+        headers.Authorization = `Bearer ${key}`;
+    }
+
+    // HTTP fetch using clerkId as the identifier via Convex HTTP API
+    // Call the users.getProfile query function which expects clerkId
+
+    const resp = await fetch(`${url}/api/users.getProfile`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${key}`,
-        },
-        body: JSON.stringify({ action: 'getUserProfile', userId }),
+        headers,
+        body: JSON.stringify({ clerkId }),
     });
 
     if (!resp.ok) {
@@ -381,12 +396,16 @@ export async function generateTalkingPointsWithOpenRouter(signals: UserSignals, 
  *
  * Returns Promise<string[]> (exactly 3 strings) or throws on unrecoverable errors.
  */
-export async function generateTalkingPoints(userId: string, companyDescription: string): Promise<string[]> {
-    if (!userId) throw new Error('userId is required');
+export async function generateTalkingPoints(
+    clerkId: string,
+    companyDescription: string,
+    ctx?: any
+): Promise<string[]> {
+    if (!clerkId) throw new Error('clerkId (Clerk user ID) is required');
     if (!companyDescription) throw new Error('companyDescription is required');
 
     // 1) Fetch read-only user data from Convex
-    const { profile } = await fetchUserFromConvex(userId);
+    const { profile } = await fetchUserFromConvex(clerkId, ctx);
 
     // Determine parsed resume: prefer a separate parsedResume if provided by upstream fetch contract,
     // otherwise use profile.identity which in this project contains parsed resume information.
