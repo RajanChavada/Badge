@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAction } from 'convex/react';
 import { useUser } from '@clerk/clerk-react';
 import { api } from '../../convex/_generated/api';
@@ -11,6 +12,7 @@ export default function Vector3D() {
   const [loading, setLoading] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const { user } = useUser();
+  const navigate = useNavigate();
   const getProfileVectors = useAction(api.users.getProfileVectors);
 
   useEffect(() => {
@@ -240,7 +242,8 @@ export default function Vector3D() {
         if (profileIdx >= 0 && profileIdx < data.length) {
           const profile = data[profileIdx];
           console.log('Clicked vector index:', profileIdx, 'profile:', profile);
-          setSelectedProfile(profile);
+          // Navigate to user profile page
+          navigate(`/user/${profile.clerkId}`);
         }
       }
     };
