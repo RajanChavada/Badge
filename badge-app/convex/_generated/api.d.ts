@@ -9,6 +9,7 @@
  */
 
 import type * as booths from "../booths.js";
+import type * as cleanup from "../cleanup.js";
 import type * as geolocation from "../geolocation.js";
 import type * as interactions from "../interactions.js";
 import type * as llm from "../llm.js";
@@ -27,6 +28,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   booths: typeof booths;
+  cleanup: typeof cleanup;
   geolocation: typeof geolocation;
   interactions: typeof interactions;
   llm: typeof llm;

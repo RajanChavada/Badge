@@ -6,7 +6,7 @@ export default defineSchema({
   numbers: defineTable({
     value: v.number(),
   }),
-  
+
   // Geolocation tracking table
   userLocations: defineTable({
     userId: v.string(),
@@ -16,7 +16,7 @@ export default defineSchema({
     floor: v.string(),
     timestamp: v.string(),
   }).index("by_user_id", ["userId"]),
-  
+
   // Booth visit tracking table
   boothVisits: defineTable({
     userId: v.string(),
@@ -32,129 +32,62 @@ export default defineSchema({
       accuracy: v.number(),
     })),
   }).index("by_user_id", ["userId"]).index("by_booth_id", ["boothId"]),
-  
-// Geolocation events log (for analytics)
-geolocationEvents: defineTable({
-  userId: v.optional(v.string()),
-  eventName: v.string(),
-  eventData: v.object({
-    latitude: v.optional(v.number()),
-    longitude: v.optional(v.number()),
-    accuracy: v.optional(v.number()),
-    booth_id: v.optional(v.string()),
-    booth_name: v.optional(v.string()),
-    error_message: v.optional(v.string()),
-  }),
-  timestamp: v.string(),
-}).index("by_event_name", ["eventName"]),
 
-// Users table for identity
-users: defineTable({
+  // Geolocation events log (for analytics)
+  geolocationEvents: defineTable({
+    userId: v.optional(v.string()),
+    eventName: v.string(),
+    eventData: v.object({
+      latitude: v.optional(v.number()),
+      longitude: v.optional(v.number()),
+      accuracy: v.optional(v.number()),
+      booth_id: v.optional(v.string()),
+      booth_name: v.optional(v.string()),
+      error_message: v.optional(v.string()),
+    }),
+    timestamp: v.string(),
+  }).index("by_event_name", ["eventName"]),
+
+  users: defineTable({
     clerkId: v.string(),
     email: v.string(),
     name: v.string(),
     resumeText: v.optional(v.string()),
-    
-    // Rich identity extracted from resume via Gemini (accepts null from Gemini API)
-    identity: v.optional(
-      v.object({
-        // Professional summary
-        headline: v.string(),
-        summary: v.optional(v.union(v.string(), v.null())),
-        
-        // Education
-        education: v.optional(v.array(v.object({
-          institution: v.string(),
-          degree: v.optional(v.union(v.string(), v.null())),
-          field: v.optional(v.union(v.string(), v.null())),
-          graduationYear: v.optional(v.union(v.string(), v.null())),
-          gpa: v.optional(v.union(v.string(), v.null())),
-        }))),
-        
-        // Work experience
-        experience: v.optional(v.array(v.object({
-          company: v.string(),
-          role: v.string(),
-          duration: v.optional(v.union(v.string(), v.null())),
-          highlights: v.optional(v.union(v.array(v.string()), v.null())),
-        }))),
-        
-        // Projects
-        projects: v.optional(v.array(v.object({
-          name: v.string(),
-          description: v.optional(v.union(v.string(), v.null())),
-          technologies: v.optional(v.union(v.array(v.string()), v.null())),
-          url: v.optional(v.union(v.string(), v.null())),
-        }))),
-        
-        // Skills (technical + soft)
-        skills: v.array(v.string()),
-        technicalSkills: v.optional(v.union(v.array(v.string()), v.null())),
-        softSkills: v.optional(v.union(v.array(v.string()), v.null())),
-        languages: v.optional(v.union(v.array(v.string()), v.null())),
-        
-        // Career goals and interests
-        interests: v.array(v.string()),
-        goals: v.array(v.string()),
-        targetRoles: v.optional(v.union(v.array(v.string()), v.null())),
-        targetCompanyTypes: v.optional(v.union(v.array(v.string()), v.null())), // startup, big tech, etc.
-        
-        // For matching
-        lookingFor: v.optional(v.union(v.array(v.string()), v.null())), // internship, full-time, mentorship
-        availableFor: v.optional(v.union(v.array(v.string()), v.null())), // collaboration, hiring, etc.
-        
-        lastUpdated: v.optional(v.number()),
-      })
-    ),
-    identityVersion: v.optional(v.number()),
-    createdAt: v.optional(v.number()),
-  }).index("by_clerk_id", ["clerkId"]),
+    identity: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_clerk_id", ["clerkId"])
+    .index("by_email", ["email"]),
 
   // Visitor profiles (evolving identity)
   visitors: defineTable({
     odentifier: v.string(), // visitorId from localStorage or clerkId
     name: v.optional(v.string()),
     email: v.optional(v.string()),
-    
+
     // Self-declared identity (from resume/profile)
     declaredSkills: v.optional(v.array(v.string())),
     declaredInterests: v.optional(v.array(v.string())),
-    
+
     // AI-perceived identity (from conversations)
     perceivedSkills: v.optional(v.array(v.string())),
     perceivedInterests: v.optional(v.array(v.string())),
     perceivedStrengths: v.optional(v.array(v.string())),
-    
+
     // Aggregated metrics for recommendations
     totalInteractions: v.number(),
     positiveInteractionRate: v.number(), // 0-1
     topTags: v.optional(v.array(v.string())), // Most frequent tags
     identityVersion: v.number(),
-    
+
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_identifier", ["odentifier"]),
 
-  // Booths/People at the event
-  booths: defineTable({
-    name: v.string(),
-    company: v.string(),
-    description: v.string(),
-    tags: v.array(v.string()), // What they're looking for / offering
-    lookingFor: v.optional(v.array(v.string())), // Skills they want
-    offering: v.optional(v.array(v.string())), // What they provide (jobs, mentorship, etc.)
-    createdAt: v.number(),
-  })
-    .index("by_company", ["company"])
-    .searchIndex("search_booths", {
-      searchField: "description",
-      filterFields: ["company"],
-    }),
-
-  // Rich interactions with LLM-processed data
   interactions: defineTable({
-    visitorId: v.string(),
-    visitorBoothId: v.string(),
+    userId: v.string(),
+    boothId: v.string(),
     boothName: v.string(),
 
     // Raw content
@@ -168,12 +101,14 @@ users: defineTable({
     confidence: v.optional(v.number()),
     keyTopics: v.optional(v.array(v.string())),
     actionItems: v.optional(v.array(v.string())),
-    
-    // New: Recommendation-relevant fields
+
+    // Profile-aware fields
     mentionedSkills: v.optional(v.array(v.string())),
     mentionedInterests: v.optional(v.array(v.string())),
-    connectionPotential: v.optional(v.string()), // high/medium/low
+    connectionPotential: v.optional(v.string()),
     suggestedFollowUp: v.optional(v.string()),
+    profileAlignmentScore: v.optional(v.number()),
+    careerRelevance: v.optional(v.array(v.string())),
 
     // Metadata
     hasAudio: v.boolean(),
@@ -183,31 +118,44 @@ users: defineTable({
     llmModel: v.optional(v.string()),
 
     createdAt: v.number(),
-  })
-    .index("by_visitor", ["visitorId"])
-    .index("by_booth", ["visitorBoothId"])
-    .index("by_visitor_time", ["visitorId", "createdAt"]),
 
-  // Recommendations generated by AI
-  recommendations: defineTable({
-    visitorId: v.string(),
-    recommendedBoothId: v.string(),
-    recommendedBoothName: v.string(),
-    
-    // Why this recommendation
-    matchScore: v.number(), // 0-100
-    matchReasons: v.array(v.string()),
-    basedOnTags: v.array(v.string()),
-    basedOnInteractions: v.array(v.id("interactions")),
-    
-    // Status
-    status: v.string(), // "pending" | "clicked" | "visited" | "dismissed"
-    
-    createdAt: v.number(),
-    updatedAt: v.optional(v.number()),
+    // OLD FIELDS (for backwards compatibility) - TEMPORARY
+    visitorId: v.optional(v.string()), // OLD - will migrate to userId
+    visitorBoothId: v.optional(v.string()), // OLD - will migrate to boothId
   })
-    .index("by_visitor", ["visitorId"])
-    .index("by_visitor_status", ["visitorId", "status"]),
+    .index("by_user", ["userId"])
+    .index("by_booth", ["boothId"])
+    .index("by_user_time", ["userId", "createdAt"]),
+
+  booths: defineTable({
+    name: v.string(),
+    company: v.string(),
+    description: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    location: v.optional(v.string()),
+    contactEmail: v.optional(v.string()),
+    lookingFor: v.optional(v.array(v.string())),
+    representatives: v.optional(v.array(v.object({
+      name: v.string(),
+      role: v.string(),
+      bio: v.optional(v.string()),
+    }))),
+    createdAt: v.number(),
+  })
+    .index("by_name", ["name"])
+    .index("by_company", ["company"]),
+
+  recommendations: defineTable({
+    userId: v.string(),
+    boothId: v.string(),
+    score: v.number(),
+    reasoning: v.array(v.string()),
+    basedOn: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_user_fresh", ["userId", "expiresAt"])
+    .index("by_user_score", ["userId", "score"]),
 
   // Identity evolution snapshots (for "you arrived as X, leaving as Y")
   identitySnapshots: defineTable({

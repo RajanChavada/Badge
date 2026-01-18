@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { UserButton } from '@clerk/clerk-react'
-import { Home, MapPin, MessageCircle, User } from 'lucide-react'
+import { Home, MapPin, MessageCircle, User, Mic } from 'lucide-react'
 import './Navigation.css'
 
 export default function Navigation() {
@@ -44,6 +44,13 @@ export default function Navigation() {
           >
             <MessageCircle size={20} />
             <span>Chat</span>
+          </Link>
+          <Link
+            to="/live"
+            className={`nav-link ${isActive('/live') ? 'active' : ''}`}
+          >
+            <Mic size={20} />
+            <span>Live</span>
           </Link>
         </div>
 

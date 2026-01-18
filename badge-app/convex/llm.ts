@@ -29,23 +29,26 @@ export const enrichTranscript = action({
     })),
   },
   handler: async (_, args): Promise<EnrichedInteraction> => {
-    const openrouterKey = process.env.OPENROUTER_API_KEY;
+    const geminiKey = process.env.GEMINI_API_KEY;
 
-    if (!openrouterKey) {
-      console.warn("[LLM] No OpenRouter API key");
-      return getDefaultResponse();
+    if (!geminiKey) {
+      console.error("❌ GEMINI_API_KEY is missing. Please set it in the Convex Dashboard.");
+      throw new Error("Configuration Error: GEMINI_API_KEY is missing. Check backend logs.");
     }
 
+    console.log(`[LLM] Using Gemini Key starting with: ${geminiKey.substring(0, 4)}...`);
+
     try {
-      return await callOpenRouter(openrouterKey, args.transcript, args.boothName, args.visitorContext);
+      return await callGemini(geminiKey, args.transcript, args.boothName, args.visitorContext);
     } catch (err) {
       console.error("[LLM] Error:", err);
-      return getDefaultResponse();
+      const errorMsg = err instanceof Error ? err.message : "Unknown error";
+      return getDefaultResponse(`Analysis failed: ${errorMsg}`);
     }
   },
 });
 
-async function callOpenRouter(
+async function callGemini(
   apiKey: string,
   transcript: string,
   boothName: string,
@@ -53,40 +56,35 @@ async function callOpenRouter(
 ): Promise<EnrichedInteraction> {
   const prompt = buildPrompt(transcript, boothName, visitorContext);
 
-  console.log("[LLM] Calling OpenRouter with transcript length:", transcript.length);
+  console.log("[LLM] Calling Gemini with transcript length:", transcript.length);
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://badge-app.dev",
-      "X-Title": "Badge - Event Networking",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.0-flash-001",
-      messages: [
-        {
-          role: "system",
-          content: `You are an AI that analyzes networking conversations at career fairs and hackathons.
-Your job is to extract insights that help attendees make better connections.
-Return ONLY valid JSON, no markdown code blocks.`,
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: "application/json"
         },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.3,
-      max_tokens: 800,
-    }),
-  });
+      }),
+    }
+  );
 
   if (!response.ok) {
     const error = await response.text();
-    console.error("[LLM] OpenRouter error:", response.status, error);
-    throw new Error(`OpenRouter error: ${response.status}`);
+    console.error("[LLM] Gemini API error:", response.status, error);
+    throw new Error(`Gemini API error: ${response.status}`);
   }
 
   const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || "{}";
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
 
   console.log("[LLM] Response received, parsing...");
 
@@ -106,7 +104,8 @@ Visitor Context:
 `
     : "";
 
-  return `Analyze this networking conversation from a career fair/hackathon.
+  return `You are an AI that analyzes networking conversations at career fairs and hackathons.
+Your job is to extract insights that help attendees make better connections.
 
 Booth/Person: ${boothName}
 ${contextSection}
@@ -133,14 +132,12 @@ Guidelines:
 - tags: lowercase, hyphenated (e.g., "machine-learning", "web-development")
 - sentiment: "positive" = good rapport, mutual interest; "neutral" = informational; "negative" = mismatch
 - connectionPotential: based on how well the conversation went and mutual fit
-- suggestedFollowUp: actionable next step (e.g., "Send portfolio link", "Ask about internship timeline")
-
-Return ONLY the JSON object, no explanation.`;
+- suggestedFollowUp: actionable next step (e.g., "Send portfolio link", "Ask about internship timeline")`;
 }
 
 function parseResponse(content: string): EnrichedInteraction {
   try {
-    // Extract JSON from potential markdown
+    // Clean up response if needed (API usually handles JSON mode well but safety first)
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("[LLM] No JSON found in response");
@@ -174,9 +171,9 @@ function parseResponse(content: string): EnrichedInteraction {
   }
 }
 
-function getDefaultResponse(): EnrichedInteraction {
+function getDefaultResponse(summaryOverride?: string): EnrichedInteraction {
   return {
-    summary: "Interaction recorded",
+    summary: summaryOverride || "Interaction recorded",
     tags: [],
     sentiment: "neutral",
     confidence: 0,

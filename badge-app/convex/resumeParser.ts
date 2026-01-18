@@ -206,21 +206,18 @@ async function callGemini(apiKey: string, prompt: string): Promise<{
 
   console.log("[ResumeParser] Raw Gemini response:", content.slice(0, 500));
 
-  // Clean up response (remove markdown code blocks if present)
-  let cleaned = content.trim();
-  if (cleaned.startsWith("```json")) {
-    cleaned = cleaned.slice(7);
-  } else if (cleaned.startsWith("```")) {
-    cleaned = cleaned.slice(3);
-  }
-  if (cleaned.endsWith("```")) {
-    cleaned = cleaned.slice(0, -3);
-  }
+  // Clean up response (extract JSON from markdown code blocks or raw text)
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  let cleaned = jsonMatch ? jsonMatch[0] : content;
+
+  // Remove markdown code fences if they got included in the match (unlikely with greedy match but safe)
+  cleaned = cleaned.replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/\s*```$/, "");
+
   cleaned = cleaned.trim();
 
   try {
     const parsed = JSON.parse(cleaned);
-    
+
     // Ensure required fields have defaults
     return {
       headline: parsed.headline || "Hackathon Attendee",
