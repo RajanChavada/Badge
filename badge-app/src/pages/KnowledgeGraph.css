@@ -1,0 +1,139 @@
+.knowledge-graph-page {
+  width: 100%;
+  height: 100vh;
+  position: relative;
+  background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
+  overflow: hidden;
+}
+
+.loading-message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 200;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #667eea;
+  border-radius: 12px;
+  padding: 30px 50px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+}
+
+.loading-message p {
+  color: #667eea;
+  font-size: 1.2em;
+  margin: 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.graph-legend {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #667eea;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 250px;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
+}
+
+.graph-legend h4 {
+  margin: 0 0 16px 0;
+  color: #667eea;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.graph-legend ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.graph-legend li {
+  color: #1a1a1a;
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+.graph-legend li:before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color, #667eea);
+  flex-shrink: 0;
+}
+
+.graph-help {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #667eea;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 300px;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.15);
+}
+
+.graph-help h4 {
+  margin: 0 0 12px 0;
+  color: #667eea;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.graph-help ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.graph-help li {
+  color: #1a1a1a;
+  font-size: 0.9em;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.graph-help strong {
+  color: #764ba2;
+}
+
+@media (max-width: 768px) {
+  .graph-legend,
+  .graph-help {
+    max-width: calc(100vw - 40px);
+    font-size: 0.85em;
+  }
+
+  .graph-legend h4,
+  .graph-help h4 {
+    font-size: 0.95em;
+  }
+}
