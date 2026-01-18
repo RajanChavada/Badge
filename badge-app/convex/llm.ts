@@ -96,43 +96,48 @@ function buildPrompt(
   boothName: string,
   visitorContext?: { previousTags: string[]; interactionCount: number }
 ): string {
-  const contextSection = visitorContext
-    ? `
-Visitor Context:
-- Previous interaction tags: ${visitorContext.previousTags.join(", ") || "none"}
-- Number of previous interactions: ${visitorContext.interactionCount}
-`
+  const contextSection = visitorContext && visitorContext.previousTags.length > 0
+    ? `\n(For context only - previous topics discussed: ${visitorContext.previousTags.slice(0, 5).join(", ")})`
     : "";
 
-  return `You are an AI that analyzes networking conversations at career fairs and hackathons.
-Your job is to extract insights that help attendees make better connections.
+  return `You are an AI networking coach at a hackathon/career fair event.
 
-Booth/Person: ${boothName}
-${contextSection}
+CURRENT CONVERSATION (THIS IS THE MOST IMPORTANT PART):
+Person/Booth: ${boothName}
+
 Transcript:
 """
 ${transcript}
 """
+${contextSection}
 
-Extract the following and return ONLY valid JSON:
+Analyze THIS conversation and suggest what the person should do NEXT based on what was discussed.
+
+Return ONLY valid JSON:
 {
-  "summary": "1-2 sentence summary of the conversation",
-  "tags": ["skill-or-interest-tag-1", "tag-2", "tag-3"],
+  "summary": "1-2 sentence summary of THIS conversation",
+  "tags": ["topic-from-this-conversation-1", "topic-2", "topic-3"],
   "sentiment": "positive" | "neutral" | "negative",
   "confidence": 0.0-1.0,
-  "keyTopics": ["main-topic-1", "main-topic-2"],
-  "actionItems": ["follow-up action if mentioned"],
-  "mentionedSkills": ["specific skills discussed"],
-  "mentionedInterests": ["interests or passions mentioned"],
+  "keyTopics": ["main-topic-from-transcript-1", "main-topic-2"],
+  "actionItems": ["action based on THIS conversation"],
+  "mentionedSkills": ["skills mentioned in THIS transcript"],
+  "mentionedInterests": ["interests mentioned in THIS transcript"],
   "connectionPotential": "high" | "medium" | "low",
-  "suggestedFollowUp": "specific suggestion for what to do next"
+  "suggestedFollowUp": "NEXT BEST ACTION based on THIS conversation"
 }
 
-Guidelines:
-- tags: lowercase, hyphenated (e.g., "machine-learning", "web-development")
-- sentiment: "positive" = good rapport, mutual interest; "neutral" = informational; "negative" = mismatch
-- connectionPotential: based on how well the conversation went and mutual fit
-- suggestedFollowUp: actionable next step (e.g., "Send portfolio link", "Ask about internship timeline")`;
+CRITICAL RULES FOR suggestedFollowUp:
+1. The next action MUST be directly related to what was discussed in THIS transcript
+2. If they talked about ballet, suggest ballet-related connections
+3. If they talked about LeetCode, suggest coding practice or engineer connections
+4. DO NOT suggest things unrelated to the transcript
+5. Be specific: "Find someone on a dance/creative team" NOT "Find a Google Cloud recruiter" if they didn't mention that
+
+Examples based on transcript content:
+- Transcript mentions ballet → "Find someone interested in performing arts or creative projects"
+- Transcript mentions LeetCode → "Connect with engineers who practice competitive programming"
+- Transcript mentions recruiters → "Follow up with the recruiter about application timeline"`;
 }
 
 function parseResponse(content: string): EnrichedInteraction {
@@ -163,7 +168,7 @@ function parseResponse(content: string): EnrichedInteraction {
       connectionPotential: ["high", "medium", "low"].includes(parsed.connectionPotential)
         ? parsed.connectionPotential
         : "medium",
-      suggestedFollowUp: parsed.suggestedFollowUp || "Follow up within a week",
+      suggestedFollowUp: parsed.suggestedFollowUp || "Find someone with complementary skills to connect with next",
     };
   } catch (err) {
     console.error("[LLM] Parse error:", err);
@@ -182,6 +187,6 @@ function getDefaultResponse(summaryOverride?: string): EnrichedInteraction {
     mentionedSkills: [],
     mentionedInterests: [],
     connectionPotential: "medium",
-    suggestedFollowUp: "Follow up within a week",
+    suggestedFollowUp: "Find someone with complementary skills to expand your network",
   };
 }

@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as backboard from "../backboard.js";
 import type * as booths from "../booths.js";
 import type * as cleanup from "../cleanup.js";
 import type * as geolocation from "../geolocation.js";
@@ -27,6 +28,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  backboard: typeof backboard;
   booths: typeof booths;
   cleanup: typeof cleanup;
   geolocation: typeof geolocation;
