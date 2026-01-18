@@ -10,77 +10,153 @@ import './KnowledgeGraph.css'
 const SPONSOR_BOOTHS = [
   {
     id: '1',
-    name: 'Google',
-    companyName: 'Google',
-    description: 'Search & Cloud Solutions',
-    color: 0x4285f4,
-    tags: ['AI/ML', 'Cloud', 'Web Dev'],
-    talkingPoints: 'Visit us to learn about our latest innovations in AI and cloud computing',
+    name: 'Shopify',
+    companyName: 'Shopify',
+    description: 'Global Commerce Platform',
+    color: 0x96be28,
+    tags: ['E-Commerce', 'React', 'Ruby', 'Scalability'],
+    talkingPoints: 'Ask about their Hydrogen framework or new merchant solutions.',
     keyPeople: [
       {
         id: 'p1',
-        name: 'To be announced',
-        role: 'TBA',
-        company: 'Google',
-        bio: 'Connect with us at the booth',
-        expertise: ['AI/ML', 'Cloud', 'Web Dev'],
+        name: 'Recruiter',
+        role: 'University Talent',
+        company: 'Shopify',
+        bio: 'Looking for engineering interns',
+        expertise: ['Full Stack', 'Commerce'],
       },
     ],
   },
   {
     id: '2',
-    name: 'Shopify',
-    companyName: 'Shopify',
-    description: 'E-Commerce Platform',
-    color: 0x96be28,
-    tags: ['E-Commerce', 'Web Dev', 'Payments'],
-    talkingPoints: 'Explore opportunities with the commerce platform',
+    name: 'Amplitude',
+    companyName: 'Amplitude Analytics',
+    description: 'Digital Analytics Platform',
+    color: 0x2e92ff,
+    tags: ['Analytics', 'Data Science', 'Product Growth'],
+    talkingPoints: 'Discuss product intelligence and event-driven data tracking.',
     keyPeople: [
       {
         id: 'p2',
-        name: 'To be announced',
-        role: 'TBA',
-        company: 'Shopify',
-        bio: 'Connect with us at the booth',
-        expertise: ['E-Commerce', 'Web Dev', 'Payments'],
+        name: 'Data Eng',
+        role: 'Senior Engineer',
+        company: 'Amplitude',
+        bio: 'Scale team representative',
+        expertise: ['Big Data', 'Distributed Systems'],
       },
     ],
   },
   {
     id: '3',
-    name: 'Microsoft',
-    companyName: 'Microsoft',
-    description: 'Cloud & AI Platform',
-    color: 0x00a4ef,
-    tags: ['Cloud', 'AI/ML', 'Enterprise'],
-    talkingPoints: 'Discover career opportunities in cloud infrastructure and AI',
+    name: 'Foresters',
+    companyName: 'Foresters Financial',
+    description: 'Life Insurance & Finance',
+    color: 0x005596,
+    tags: ['FinTech', 'Insurance', 'Security', 'Enterprise'],
+    talkingPoints: 'Ask about digital transformation in the financial sector.',
     keyPeople: [
       {
         id: 'p3',
-        name: 'To be announced',
-        role: 'TBA',
-        company: 'Microsoft',
-        bio: 'Connect with us at the booth',
-        expertise: ['Cloud', 'AI/ML', 'Enterprise'],
+        name: 'Hiring Manager',
+        role: 'Engineering Director',
+        company: 'Foresters',
+        bio: 'Hiring for digital teams',
+        expertise: ['FinTech', 'Management'],
       },
     ],
   },
   {
     id: '4',
-    name: 'Meta',
-    companyName: 'Meta',
-    description: 'Social & VR',
-    color: 0x1877f2,
-    tags: ['Web Dev', 'Mobile Dev', 'VR/AR'],
-    talkingPoints: 'Join us to explore the future of social and virtual reality',
+    name: 'Backboard',
+    companyName: 'Backboard.io',
+    description: 'AI Recruiting Platform',
+    color: 0x000000,
+    tags: ['HR Tech', 'AI/ML', 'Startups', 'SaaS'],
+    talkingPoints: 'Ask about their AI matching algorithms for candidates.',
     keyPeople: [
       {
         id: 'p4',
-        name: 'To be announced',
-        role: 'TBA',
-        company: 'Meta',
-        bio: 'Connect with us at the booth',
-        expertise: ['Web Dev', 'Mobile Dev', 'VR/AR'],
+        name: 'Founder',
+        role: 'CEO',
+        company: 'Backboard',
+        bio: 'Building the future of hiring',
+        expertise: ['AI', 'Product'],
+      },
+    ],
+  },
+  {
+    id: '5',
+    name: 'MLH',
+    companyName: 'Major League Hacking',
+    description: 'Official Student Hackathon League',
+    color: 0xe7334d,
+    tags: ['Community', 'Education', 'Open Source'],
+    talkingPoints: 'Ask about the Fellowship program and upcoming seasons.',
+    keyPeople: [
+      {
+        id: 'p5',
+        name: 'Coach',
+        role: 'Hackathon Coach',
+        company: 'MLH',
+        bio: 'Supporting student hackers',
+        expertise: ['Community', 'Education'],
+      },
+    ],
+  },
+  {
+    id: '6',
+    name: '1Password',
+    companyName: '1Password',
+    description: 'Password Management & Security',
+    color: 0x0084ff,
+    tags: ['Security', 'Cryptography', 'Go', 'Rust'],
+    talkingPoints: 'Discuss passkeys and the future of authentication.',
+    keyPeople: [
+      {
+        id: 'p6',
+        name: 'Security Eng',
+        role: 'Security Engineer',
+        company: '1Password',
+        bio: 'Focused on cryptography',
+        expertise: ['Security', 'Rust'],
+      },
+    ],
+  },
+  {
+    id: '7',
+    name: 'Verily',
+    companyName: 'Verily Life Sciences',
+    description: 'Precision Health Technology',
+    color: 0x4285f4,
+    tags: ['HealthTech', 'BioTech', 'Data Analysis'],
+    talkingPoints: 'Ask about applying potential tech to healthcare problems.',
+    keyPeople: [
+      {
+        id: 'p7',
+        name: 'Researcher',
+        role: 'R&D Scientist',
+        company: 'Verily',
+        bio: 'Working on health devices',
+        expertise: ['BioTech', 'Hardware'],
+      },
+    ],
+  },
+  {
+    id: '8',
+    name: 'ElevenLabs',
+    companyName: 'ElevenLabs',
+    description: 'AI Voice Research',
+    color: 0x333333,
+    tags: ['Generative AI', 'Voice Technology', 'Audio'],
+    talkingPoints: 'Discuss the latest breakthroughs in speech synthesis.',
+    keyPeople: [
+      {
+        id: 'p8',
+        name: 'AI Researcher',
+        role: 'ML Engineer',
+        company: 'ElevenLabs',
+        bio: 'Voice synthesis expert',
+        expertise: ['GenAI', 'Audio Processing'],
       },
     ],
   },
@@ -132,10 +208,10 @@ export default function KnowledgeGraph() {
     // Update graph data
     const nodes = graphManager.getNodes()
     const edges = graphManager.getEdges()
-    
+
     console.log('Graph nodes:', nodes)
     console.log('Graph edges:', edges)
-    
+
     setGraphData({
       nodes,
       edges,
@@ -195,10 +271,10 @@ export default function KnowledgeGraph() {
           <p>Loading knowledge graph...</p>
         </div>
       ) : null}
-      
-      <KnowledgeGraph3D 
-        nodes={graphData.nodes} 
-        edges={graphData.edges} 
+
+      <KnowledgeGraph3D
+        nodes={graphData.nodes}
+        edges={graphData.edges}
         onNodeClick={handleNodeClick}
         onGenerateBoothStrategy={handleGenerateBoothStrategy}
         loadingStrategies={loadingStrategies}
@@ -210,7 +286,7 @@ export default function KnowledgeGraph() {
           <div className="booth-strategies-modal">
             <div className="booth-strategies-header">
               <h2>{selectedNode.name} Booth Approach</h2>
-              <button 
+              <button
                 className="close-strategies-btn"
                 onClick={() => {
                   setSelectedNode(null)

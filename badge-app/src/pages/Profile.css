@@ -26,8 +26,9 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 100px);
-  padding: 2rem;
+  min-height: 100vh;
+  padding-top: 120px;
+  /* Space for floating navbar */
   perspective: 1000px;
   position: relative;
   overflow: hidden;
@@ -36,7 +37,8 @@
 /* Welcome Header */
 .welcome-header {
   position: absolute;
-  top: 2rem;
+  top: 100px;
+  /* Pushed down to clear navbar */
   left: 2rem;
 }
 

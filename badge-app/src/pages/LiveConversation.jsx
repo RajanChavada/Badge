@@ -5,6 +5,7 @@ import { useUser } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
 import { createChatSession, sendChatMessage } from '../utils/backboardClient';
 import ReactMarkdown from 'react-markdown';
+import BrainVisual from '../components/BrainVisual';
 import './LiveConversation.css'
 
 export default function LiveConversation() {
@@ -39,34 +40,26 @@ export default function LiveConversation() {
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-            mediaRecorderRef.current = mediaRecorder;
+            mediaRecorderRef.current = new MediaRecorder(stream);
             audioChunksRef.current = [];
 
-            mediaRecorder.ondataavailable = (event) => {
+            mediaRecorderRef.current.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     audioChunksRef.current.push(event.data);
                 }
             };
 
-            mediaRecorder.onstop = async () => {
-                if (audioChunksRef.current.length === 0) {
-                    setError("No audio recorded.");
-                    return;
-                }
-
+            mediaRecorderRef.current.onstop = async () => {
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                processRecording(audioBlob);
-                stream.getTracks().forEach(track => track.stop());
+                await handleAudioUpload(audioBlob);
             };
 
-            mediaRecorder.start(1000);
+            mediaRecorderRef.current.start();
             setIsRecording(true);
-            setFeedback(null);
             setError(null);
         } catch (err) {
-            console.error("Microphone error:", err);
-            setError("Microphone access denied or not available.");
+            console.error("Error accessing microphone:", err);
+            setError("Could not access microphone.");
         }
     };
 
@@ -78,52 +71,51 @@ export default function LiveConversation() {
         }
     };
 
-    const processRecording = async (audioBlob) => {
+    const handleAudioUpload = async (audioBlob) => {
         try {
-            // 1. Convert to Base64
-            const arrayBuffer = await audioBlob.arrayBuffer();
-            const uint8Array = new Uint8Array(arrayBuffer);
-            let binary = "";
-            for (let i = 0; i < uint8Array.length; i++) {
-                binary += String.fromCharCode(uint8Array[i]);
-            }
-            const base64Audio = btoa(binary);
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async () => {
+                const base64Audio = reader.result.split(',')[1];
+                try {
+                    const transcription = await transcribeAudio({
+                        audioBase64: base64Audio,
+                        mimeType: audioBlob.type || 'audio/webm',
+                    });
 
-            // 2. Transcribe
-            const transResult = await transcribeAudio({
-                audioBase64: base64Audio,
-                mimeType: 'audio/webm',
-            });
+                    if (!transcription.success) throw new Error(transcription.error || "Transcription failed");
+                    const transcriptText = transcription.text || "";
+                    if (!transcriptText) {
+                        setError("No speech detected. Please try again.");
+                        setIsProcessing(false);
+                        return;
+                    }
 
-            if (!transResult.success || !transResult.text || transResult.text.trim().length === 0) {
-                setError("No speech detected via transcription.");
-                setIsProcessing(false);
-                return;
-            }
-
-            // 3. Process & Save (Includes Feedback Loop)
-            const result = await processInteraction({
-                userId: user.id,
-                boothId: "live-interaction", // Generic ID for ad-hoc live convos
-                boothName: "Live Conversation",
-                transcript: transResult.text,
-                hasAudio: true,
-                recordingDurationSec: Math.round(audioBlob.size / 32000), // Approx
-            });
-
-            setFeedback(result);
-
+                    const data = await processInteraction({
+                        userId: user.id,
+                        boothId: "networking-coach",
+                        boothName: "Networking Coach",
+                        transcript: transcriptText,
+                        hasAudio: true,
+                        recordingDurationSec: Math.ceil(audioBlob.size / 32000),
+                    });
+                    setFeedback(data);
+                } catch (err) {
+                    console.error("API Error:", err);
+                    setError(err.message || "Processing failed");
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
         } catch (err) {
-            console.error("Processing failed:", err);
-            setError("Failed to process conversation.");
-        } finally {
+            console.error("Upload preparation failed:", err);
+            setError("Failed to prepare audio.");
             setIsProcessing(false);
         }
     };
 
     const openChatModal = async () => {
         if (!feedback) return;
-
         setIsChatOpen(true);
         setIsChatLoading(true);
         setChatMessages([]);
@@ -135,25 +127,19 @@ export default function LiveConversation() {
             mentionedInterests: feedback.mentionedInterests || [],
         };
 
-        // Create a session with the Convex action and store in ref
         const session = createChatSession(context, sendChatAction, user?.id);
         chatSessionRef.current = session;
 
         try {
-            // Get initial response
             const initialResponse = await sendChatMessage(
                 session,
                 `Help me prepare for this next action: "${feedback.suggestedFollowUp}". Give me a quick tip.`
             );
-            setChatMessages([{
-                role: 'assistant',
-                content: initialResponse
-            }]);
+            setChatMessages([{ role: 'assistant', content: initialResponse }]);
         } catch (err) {
-            console.error("Failed to get initial response:", err);
             setChatMessages([{
                 role: 'assistant',
-                content: `Your next best action is: **${feedback.suggestedFollowUp}**\n\nHow can I help you prepare for this?`
+                content: `Next action: **${feedback.suggestedFollowUp}**\n\nHow can I help you prepare?`
             }]);
         } finally {
             setIsChatLoading(false);
@@ -162,145 +148,85 @@ export default function LiveConversation() {
 
     const handleSendMessage = async () => {
         if (!chatInput.trim() || isChatLoading) return;
-
         const userMessage = chatInput.trim();
         setChatInput('');
-
-        // Add user message to chat
         setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
         setIsChatLoading(true);
 
         try {
-            if (chatSessionRef.current) {
-                const response = await sendChatMessage(chatSessionRef.current, userMessage);
-                setChatMessages(prev => [...prev, {
-                    role: 'assistant',
-                    content: response
-                }]);
-            } else {
-                setChatMessages(prev => [...prev, {
-                    role: 'assistant',
-                    content: "Session not initialized. Please reopen the chat."
-                }]);
-            }
+            const response = await sendChatMessage(chatSessionRef.current, userMessage);
+            setChatMessages(prev => [...prev, { role: 'assistant', content: response }]);
         } catch (err) {
-            console.error("Chat error:", err);
-            setChatMessages(prev => [...prev, {
-                role: 'assistant',
-                content: "Sorry, I couldn't process that. Please try again."
-            }]);
+            setChatMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I couldn't process that." }]);
         } finally {
             setIsChatLoading(false);
-            if (chatContainerRef.current) {
-                chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-            }
-        }
-    };
-
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSendMessage();
         }
     };
 
     return (
-        <div className="live-conversation">
-            <div className="live-header">
-                <h1>Live Conversation</h1>
-                <p>Record your real-time interactions to evolve your profile.</p>
-            </div>
+        <div className="live-conversation-container">
+            <BrainVisual isRecording={isRecording} />
 
-            <div className="record-area">
-                {!isRecording && !isProcessing && (
-                    <button className="record-btn start" onClick={startRecording}>
-                        <Mic size={48} />
-                        <span>Start Recording</span>
-                    </button>
-                )}
-
-                {isRecording && (
-                    <button className="record-btn stop" onClick={stopRecording}>
-                        <div className="pulse-ring"></div>
-                        <Square size={48} fill="currentColor" />
-                        <span>Stop Recording</span>
-                    </button>
-                )}
-
-                {isProcessing && (
-                    <div className="processing-state">
-                        <div className="spinner"></div>
-                        <p>Analyzing conversation...</p>
-                    </div>
-                )}
-            </div>
-
-            {error && (
-                <div className="error-message">
-                    <AlertCircle size={20} />
-                    <span>{error}</span>
+            <div className="content-wrapper">
+                <div className="conversation-header">
+                    <h1>Live Conversation</h1>
+                    <p>Record your real-time interactions to evolve your profile.</p>
                 </div>
-            )}
 
-            {feedback && (
-                <div className="feedback-card">
-                    <div className="feedback-header">
-                        <Sparkles className="icon-sparkle" />
-                        <h2>Interactive Analysis</h2>
+                <div className="recording-area">
+                    <button
+                        className={`record-btn ${isRecording ? 'recording' : ''} ${isProcessing ? 'processing' : ''}`}
+                        onClick={isRecording ? stopRecording : startRecording}
+                        disabled={isProcessing}
+                    >
+                        {isRecording ? <Square size={32} /> : <Mic size={32} />}
+                        <div className="record-ring"></div>
+                    </button>
+                    <p className="record-status">
+                        {isProcessing ? 'Analyzing...' : isRecording ? 'Recording...' : 'Tap to start'}
+                    </p>
+                </div>
+
+                {error && (
+                    <div className="error-card">
+                        <AlertCircle size={20} />
+                        <p>{error}</p>
                     </div>
+                )}
 
-                    <div className="feedback-summary">
-                        <h3>Summary</h3>
-                        <p>{feedback.summary}</p>
-                    </div>
+                {feedback && (
+                    <div className="feedback-card">
+                        <div className="feedback-header">
+                            <Sparkles className="feedback-icon" />
+                            <h2>Analysis Complete</h2>
+                        </div>
 
-                    <div className="feedback-stats">
-                        <div className="stat-item">
-                            <label>Alignment</label>
-                            <div className="score-ring" style={{ '--score': `${feedback.profileAlignmentScore}%` }}>
-                                <span>{feedback.profileAlignmentScore}%</span>
+                        <div className="summary-section">
+                            <h3>Summary</h3>
+                            <p>{feedback.summary}</p>
+                        </div>
+
+                        <div className="action-section">
+                            <div className="action-header">
+                                <h3>Next Best Action</h3>
+                                <span className="confidence-badge">
+                                    {(feedback.confidence * 100).toFixed(0)}% Match
+                                </span>
                             </div>
-                        </div>
-                        <div className="stat-item">
-                            <label>Sentiment</label>
-                            <span className={`sentiment-badge ${feedback.sentiment}`}>
-                                {feedback.sentiment}
-                            </span>
-                        </div>
-                    </div>
+                            <p className="action-text">{feedback.suggestedFollowUp}</p>
 
-                    <div className="feedback-tags">
-                        <h3>Identity Updates</h3>
-                        <div className="tags-list">
-                            {feedback.mentionedSkills?.map(skill => (
-                                <span key={skill} className="tag skill">+ {skill}</span>
-                            ))}
-                            {feedback.mentionedInterests?.map(interest => (
-                                <span key={interest} className="tag interest">+ {interest}</span>
-                            ))}
-                            {(!feedback.mentionedSkills?.length && !feedback.mentionedInterests?.length) &&
-                                <span className="no-tags">No new skills/interests detected.</span>
-                            }
-                        </div>
-                    </div>
-
-                    <div className="feedback-action">
-                        <h3>Next Best Action</h3>
-                        <div className="action-row">
-                            <p>{feedback.suggestedFollowUp}</p>
-                            <button className="chat-arrow-btn" onClick={openChatModal} title="Get coaching for this action">
-                                <MessageCircle size={20} />
+                            <button className="chat-action-btn" onClick={openChatModal}>
+                                <span>Get Coach Advice</span>
                                 <ArrowRight size={20} />
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
-            {/* Chat Modal */}
             {isChatOpen && (
-                <div className="chat-modal-overlay" onClick={() => setIsChatOpen(false)}>
-                    <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="chat-modal-overlay">
+                    <div className="chat-modal">
                         <div className="chat-modal-header">
                             <div className="chat-title">
                                 <MessageCircle size={20} />
@@ -322,9 +248,7 @@ export default function LiveConversation() {
                             {isChatLoading && (
                                 <div className="chat-message assistant">
                                     <div className="message-content typing">
-                                        <span className="dot"></span>
-                                        <span className="dot"></span>
-                                        <span className="dot"></span>
+                                        <span>.</span><span>.</span><span>.</span>
                                     </div>
                                 </div>
                             )}
@@ -333,20 +257,19 @@ export default function LiveConversation() {
                         <div className="chat-input-area">
                             <input
                                 type="text"
-                                placeholder="Ask about your next connection..."
+                                placeholder="Ask for advice..."
                                 value={chatInput}
                                 onChange={(e) => setChatInput(e.target.value)}
-                                onKeyPress={handleKeyPress}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                                 disabled={isChatLoading}
                             />
-                            <button onClick={handleSendMessage} disabled={isChatLoading || !chatInput.trim()}>
-                                <Send size={20} />
+                            <button onClick={handleSendMessage} disabled={!chatInput.trim() || isChatLoading}>
+                                <Send size={18} />
                             </button>
                         </div>
                     </div>
                 </div>
             )}
         </div>
-    )
+    );
 }
-

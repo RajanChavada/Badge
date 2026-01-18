@@ -7,7 +7,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import useAppStore from '../store/useAppStore.js'
 import './KnowledgeGraph3D.css'
 
-export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick = () => {}, onGenerateBoothStrategy, loadingStrategies = false, sponsorBooths = [] }) {
+export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick = () => { }, onGenerateBoothStrategy, loadingStrategies = false, sponsorBooths = [] }) {
   const { darkMode } = useAppStore()
   const containerRef = useRef(null)
   const sceneRef = useRef(null)
@@ -44,12 +44,10 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
 
     // Clean up previous scene if nodes have changed
     if (sceneInitializedRef.current && sceneRef.current) {
-      // Only skip reinitializing if scene exists AND has the same number of nodes
       if (nodesRef.current && Object.keys(nodesRef.current).length === nodes.length) {
         return
       }
-      
-      // Otherwise, clean up the old scene
+
       if (rendererRef.current && containerRef.current.contains(rendererRef.current.domElement)) {
         containerRef.current.removeChild(rendererRef.current.domElement)
       }
@@ -60,7 +58,7 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
 
     // Scene setup
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color(darkMode ? 0x1a1a1a : 0xf5f5f5)
+    // scene.background = new THREE.Color(darkMode ? 0x1a1a1a : 0xf5f5f5)
     sceneRef.current = scene
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000)
@@ -109,6 +107,53 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
     pointLight.castShadow = true
     scene.add(pointLight)
 
+    // BACKGROUND SPRITES / PARTICLES
+    const bgGroup = new THREE.Group()
+    const bgParticlesCount = 150
+    const bgGeometry = new THREE.IcosahedronGeometry(1.5, 0) // Low poly version of main nodes
+
+    // Create random background particles to "fill it up"
+    for (let i = 0; i < bgParticlesCount; i++) {
+      const material = new THREE.MeshBasicMaterial({
+        color: darkMode ? 0x667eea : 0x999999,
+        transparent: true,
+        opacity: Math.random() * 0.2 + 0.05, // Random faint opacity
+        wireframe: Math.random() > 0.5 // Mix of wireframe and solid
+      })
+      const mesh = new THREE.Mesh(bgGeometry, material)
+
+      // Random position in a large sphere around the graph
+      const theta = Math.random() * Math.PI * 2
+      const phi = Math.acos(Math.random() * 2 - 1)
+      const radius = 100 + Math.random() * 200 // Farther out
+
+      mesh.position.set(
+        radius * Math.sin(phi) * Math.cos(theta),
+        radius * Math.sin(phi) * Math.sin(theta),
+        radius * Math.cos(phi)
+      )
+
+      // Random rotation
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI)
+
+      // Random scale
+      const scale = Math.random() * 1.5 + 0.5
+      mesh.scale.set(scale, scale, scale)
+
+      // Store speed for animation
+      mesh.userData = {
+        rotSpeed: {
+          x: (Math.random() - 0.5) * 0.01,
+          y: (Math.random() - 0.5) * 0.01
+        },
+        floatSpeed: Math.random() * 0.05
+      }
+
+      bgGroup.add(mesh)
+    }
+    scene.add(bgGroup)
+
+
     // Controls
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
@@ -121,7 +166,7 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
 
     // Create nodes
     const nodesByPosition = {}
-    
+
     nodes.forEach((node, idx) => {
       // Create visible geometry
       const geometry = new THREE.IcosahedronGeometry(6, 3)
@@ -134,7 +179,7 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
       })
 
       const mesh = new THREE.Mesh(geometry, material)
-      
+
       // Position nodes in a sphere
       const phi = Math.acos(-1 + (2 * idx) / nodes.length)
       const theta = Math.sqrt(nodes.length * Math.PI) * phi
@@ -228,6 +273,7 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
       if (intersects.length > 0) {
         const clickedMesh = intersects[0].object
         console.log('Node clicked:', clickedMesh.userData)
+        // Zoom functionality could be added here
         setSelectedNode(clickedMesh.userData)
         memoizedOnNodeClick(clickedMesh.userData)
       } else {
@@ -269,14 +315,21 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
     const animate = () => {
       animationFrameIdRef.current = requestAnimationFrame(animate)
       controls.update()
-      
+
       animationTimeRef.current += 0.016 // ~60fps
+
+      // Animate background sprites
+      bgGroup.rotation.y += 0.0005 // Slowly rotate entire background
+      bgGroup.children.forEach(mesh => {
+        mesh.rotation.x += mesh.userData.rotSpeed.x
+        mesh.rotation.y += mesh.userData.rotSpeed.y
+      })
 
       // Gentle rotation of nodes
       Object.values(nodesRef.current).forEach(node => {
         node.mesh.rotation.x += 0.001
         node.mesh.rotation.y += 0.002
-        
+
         // Add bobbing motion in random directions when enabled
         if (showBobbingRef.current) {
           const bobAmount = 2
@@ -295,13 +348,13 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
       Object.entries(labelsRef.current).forEach(([nodeId, { label, mesh }]) => {
         const vector = mesh.position.clone()
         vector.project(camera)
-        
+
         const x = (vector.x * 0.5 + 0.5) * window.innerWidth
         const y = -(vector.y * 0.5 - 0.5) * window.innerHeight
-        
+
         label.style.left = (x - label.offsetWidth / 2) + 'px'
         label.style.top = (y - 30) + 'px'
-        
+
         // Hide labels that are behind the camera or if labels are disabled
         label.style.opacity = (vector.z > 1 || !showLabelsRef.current) ? '0' : '1'
       })
@@ -337,35 +390,38 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
       if (containerRef.current && containerRef.current.contains(renderer.domElement)) {
         containerRef.current.removeChild(renderer.domElement)
       }
-      
+
       // Clear labels
       if (labelsContainerRef.current && containerRef.current && containerRef.current.contains(labelsContainerRef.current)) {
         containerRef.current.removeChild(labelsContainerRef.current)
         labelsContainerRef.current = null
       }
       labelsRef.current = {}
-      
+
       // Reset scene state
       sceneInitializedRef.current = false
       nodesRef.current = {}
       edgesRef.current = []
+
+      // Clean up Three.js resources
+      bgGeometry.dispose()
     }
   }, [nodes, edges, memoizedOnNodeClick, darkMode])
 
   return (
     <div className={`knowledge-graph-container ${darkMode ? 'dark-theme' : 'light-theme'}`}>
       <div ref={containerRef} className="graph-canvas" />
-      
+
       {/* Toggle buttons */}
       <div className="graph-controls">
-        <button 
+        <button
           className={`toggle-btn ${showLabels ? 'active' : ''}`}
           onClick={() => setShowLabels(!showLabels)}
           title="Toggle node labels"
         >
           {showLabels ? '🏷️ Labels ON' : '🏷️ Labels OFF'}
         </button>
-        <button 
+        <button
           className={`toggle-btn ${showBobbing ? 'active' : ''}`}
           onClick={() => setShowBobbing(!showBobbing)}
           title="Toggle node bobbing animation"
@@ -373,7 +429,7 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
           {showBobbing ? '🎈 Bobbing ON' : '🎈 Bobbing OFF'}
         </button>
       </div>
-      
+
       {selectedNode && (
         <div className="node-info-panel">
           <h3>{selectedNode.label}</h3>

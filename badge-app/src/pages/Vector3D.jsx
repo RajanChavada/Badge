@@ -28,11 +28,11 @@ const cosineSimilarity = (a, b) => {
 // Simple PCA implementation for dimensionality reduction
 const simplePCA = (vectors, nComponents = 3) => {
   if (!vectors || vectors.length < 2) return vectors.map(v => v.slice(0, 3));
-  
+
   try {
     const n = vectors.length;
     const d = vectors[0].length;
-    
+
     // Compute mean
     const mean = new Array(d).fill(0);
     for (let i = 0; i < n; i++) {
@@ -41,29 +41,29 @@ const simplePCA = (vectors, nComponents = 3) => {
       }
     }
     for (let j = 0; j < d; j++) mean[j] /= n;
-    
+
     // Center the data
     const centered = vectors.map(v => v.map((x, j) => x - mean[j]));
-    
+
     // For simplicity, use power iteration for first 3 components
     // This is a simplified approach that works well for visualization
     const components = [];
-    
+
     for (let comp = 0; comp < Math.min(nComponents, d); comp++) {
       let v = new Array(d).fill(0);
       v[comp] = 1; // Initialize with a vector in the comp-th direction
-      
+
       // Power iteration (simplified)
       for (let iter = 0; iter < 5; iter++) {
         const av = new Array(d).fill(0);
-        
+
         // Compute A^T * A * v
         for (let i = 0; i < n; i++) {
           let dot = 0;
           for (let j = 0; j < d; j++) dot += centered[i][j] * v[j];
           for (let j = 0; j < d; j++) av[j] += centered[i][j] * dot;
         }
-        
+
         // Normalize
         let norm = 0;
         for (let j = 0; j < d; j++) norm += av[j] * av[j];
@@ -72,10 +72,10 @@ const simplePCA = (vectors, nComponents = 3) => {
           for (let j = 0; j < d; j++) v[j] = av[j] / norm;
         }
       }
-      
+
       components.push(v);
     }
-    
+
     // Project data onto principal components
     const projected = vectors.map(vec => {
       const proj = [];
@@ -88,7 +88,7 @@ const simplePCA = (vectors, nComponents = 3) => {
       }
       return proj;
     });
-    
+
     return projected;
   } catch (error) {
     console.error('PCA error:', error);
@@ -120,13 +120,13 @@ export default function Vector3D() {
         if (result.success) {
           // Apply PCA to convert 768D vectors to 3D
           const pcaVectors = applyPCA(result.data.map(p => p.vector));
-          
+
           // Attach PCA-reduced 3D coordinates
           const enrichedData = result.data.map((profile, idx) => ({
             ...profile,
             coords3d: pcaVectors[idx] || [0, 0, 0],
           }));
-          
+
           setProfiles(enrichedData);
           visualize3D(enrichedData);
         }
@@ -147,7 +147,7 @@ export default function Vector3D() {
 
     // Three.js setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a1a);
+    // scene.background = new THREE.Color(0x1a1a1a); // Removed for immersive transparency
 
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -157,7 +157,7 @@ export default function Vector3D() {
     );
     camera.position.z = 20;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     mountRef.current.appendChild(renderer.domElement);
@@ -174,13 +174,13 @@ export default function Vector3D() {
 
     // Add XYZ axis helper - white and translucent
     const axisLength = 10;
-    const axesMaterial = new THREE.LineBasicMaterial({ 
-      color: 0xffffff, 
-      transparent: true, 
+    const axesMaterial = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
       opacity: 0.5,
       linewidth: 2
     });
-    
+
     // X axis (white)
     const xAxisGeom = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(0, 0, 0),
@@ -188,7 +188,7 @@ export default function Vector3D() {
     ]);
     const xAxis = new THREE.Line(xAxisGeom, axesMaterial);
     scene.add(xAxis);
-    
+
     // Y axis (white)
     const yAxisGeom = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(0, 0, 0),
@@ -196,7 +196,7 @@ export default function Vector3D() {
     ]);
     const yAxis = new THREE.Line(yAxisGeom, axesMaterial);
     scene.add(yAxis);
-    
+
     // Z axis (white)
     const zAxisGeom = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(0, 0, 0),
@@ -220,7 +220,7 @@ export default function Vector3D() {
       const outerRadius = 1;
       const innerRadius = 0.4;
       const points = 5;
-      
+
       for (let i = 0; i < points * 2; i++) {
         const radius = i % 2 === 0 ? outerRadius : innerRadius;
         const angle = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
@@ -264,7 +264,7 @@ export default function Vector3D() {
         isStar: false,
         time: Math.random() * Math.PI * 2,
       };
-      
+
       const geometry = new THREE.SphereGeometry(0.5, 32, 32);
       const material = new THREE.MeshStandardMaterial({
         color: color,
@@ -274,9 +274,9 @@ export default function Vector3D() {
       });
       const mesh = new THREE.Mesh(geometry, material);
       sphereGroup.add(mesh);
-      
+
       sphereGroup.position.copy(position);
-      
+
       return sphereGroup;
     };
 
@@ -288,7 +288,7 @@ export default function Vector3D() {
       const scaledY = y * 20;
       const scaledZ = z * 20;
       const position = new THREE.Vector3(scaledX, scaledY, scaledZ);
-      
+
       // Color: green for current user, rainbow for others
       let color;
       if (profile.clerkId === currentUserClerkId) {
@@ -326,20 +326,20 @@ export default function Vector3D() {
     // Click detection
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
-    
+
     // Drag controls
     let isDragging = false;
     let hasDragged = false;
     let previousMousePosition = { x: 0, y: 0 };
-    
+
     const onClick = (event) => {
       if (hasDragged) return; // Don't register clicks if we just dragged
-      
+
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
-      
+
       // Check intersections with animated objects (spheres and stars)
       const intersects = raycaster.intersectObjects(animatedObjects, true);
       if (intersects.length > 0) {
@@ -354,55 +354,55 @@ export default function Vector3D() {
         }
       }
     };
-    
+
     const onMouseDown = (event) => {
       isDragging = true;
       hasDragged = false;
       previousMousePosition = { x: event.clientX, y: event.clientY };
     };
-    
+
     const onMouseUp = () => {
       isDragging = false;
       // Reset hasDragged after a short delay to allow click event to fire
       setTimeout(() => { hasDragged = false; }, 100);
     };
-    
+
     const onMouseMove = (event) => {
       if (isDragging) {
         // Drag to rotate camera
         const deltaX = event.clientX - previousMousePosition.x;
         const deltaY = event.clientY - previousMousePosition.y;
-        
+
         // Mark that we've moved (so click won't trigger)
         if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
           hasDragged = true;
         }
-        
+
         // Rotate camera around center
         const radius = Math.sqrt(
-          camera.position.x ** 2 + 
-          camera.position.y ** 2 + 
+          camera.position.x ** 2 +
+          camera.position.y ** 2 +
           camera.position.z ** 2
         );
-        
+
         let theta = Math.atan2(camera.position.x, camera.position.z);
         let phi = Math.acos(camera.position.y / radius);
-        
+
         theta -= deltaX * 0.01;
         phi -= deltaY * 0.01;
-        
+
         // Clamp phi to avoid flipping
         phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi));
-        
+
         camera.position.x = radius * Math.sin(phi) * Math.sin(theta);
         camera.position.y = radius * Math.cos(phi);
         camera.position.z = radius * Math.sin(phi) * Math.cos(theta);
         camera.lookAt(0, 0, 0);
-        
+
         previousMousePosition = { x: event.clientX, y: event.clientY };
       }
     };
-    
+
     window.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mouseup', onMouseUp);
     window.addEventListener('mousemove', onMouseMove);
@@ -411,26 +411,26 @@ export default function Vector3D() {
     // Animation loop
     const animate = () => {
       requestAnimationFrame(animate);
-      
+
       // Animate spheres and stars
       animatedObjects.forEach((obj) => {
         if (obj.userData.isAnimated) {
           obj.userData.time += 0.01;
-          
+
           if (obj.userData.isStar) {
             // Star is static (no animation)
           } else {
             // Rotate spheres
             obj.rotation.x += 0.005;
             obj.rotation.y += 0.008;
-            
+
             // Pulsing scale effect
             const scale = 1 + Math.sin(obj.userData.time) * 0.1;
             obj.scale.set(scale, scale, scale);
           }
         }
       });
-      
+
       renderer.render(scene, camera);
     };
     animate();
@@ -468,7 +468,7 @@ export default function Vector3D() {
         const originalIdx = profiles.findIndex(prof => prof.clerkId === p.clerkId)
         const hue = originalIdx / Math.max(profiles.length, 1)
         const color = `hsl(${hue * 360}, 80%, 60%)`
-        
+
         return {
           ...p,
           similarity: cosineSimilarity(currentProfile.vector, p.vector) || 0,
@@ -490,7 +490,7 @@ export default function Vector3D() {
             <h2>3D Vector Visualization</h2>
             <p>Profiles: {profiles.length}</p>
           </div>
-          
+
           {selectedProfile && (
             <div className="profile-popup">
               <div className="popup-content">
@@ -533,8 +533,8 @@ export default function Vector3D() {
 
               <div className="rankings-list">
                 {rankings.slice(0, 10).map((profile, idx) => (
-                  <div 
-                    key={profile.clerkId} 
+                  <div
+                    key={profile.clerkId}
                     className="ranking-item"
                     onClick={() => navigate(`/user/${profile.clerkId}`)}
                   >
@@ -545,9 +545,9 @@ export default function Vector3D() {
                     </div>
                     <div className="rank-similarity">
                       <div className="similarity-bar">
-                        <div 
-                          className="similarity-fill" 
-                          style={{ 
+                        <div
+                          className="similarity-fill"
+                          style={{
                             width: `${profile.similarity * 100}%`,
                             background: profile.color
                           }}
