@@ -21,7 +21,7 @@
 
 :root[data-theme="dark"] {
   /* Dark Mode Colors - Perplexity-inspired */
-  --bg-primary: #121212;
+  --bg-primary: #1c1c1c;
   /* Deeper black/gray */
   --bg-secondary: #1e1e19;
   /* Slightly lighter for cards */
