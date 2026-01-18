@@ -4,9 +4,17 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
+import { RefreshCw } from 'lucide-react'
 import './KnowledgeGraph3D.css'
 
-export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick = () => {} }) {
+export default function KnowledgeGraph3D({ 
+  nodes = [], 
+  edges = [], 
+  onNodeClick = () => {},
+  talkingPoint = '',
+  onGenerateTalkingPoint = () => {},
+  loadingTalkingPoint = false
+}) {
   const containerRef = useRef(null)
   const sceneRef = useRef(null)
   const rendererRef = useRef(null)
@@ -379,9 +387,28 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
           {selectedNode.description && (
             <p><strong>Description:</strong> {selectedNode.description}</p>
           )}
-          {selectedNode.talkingPoints && (
-            <p><strong>Talking Points:</strong> {selectedNode.talkingPoints}</p>
-          )}
+          
+          <div className="suggested-talking-points-inline">
+            <div className="talking-points-header-inline">
+              <p style={{ margin: '0.5rem 0 0 0' }}><strong>Suggested Talking Points</strong></p>
+              <button 
+                className="refresh-button-inline"
+                onClick={onGenerateTalkingPoint}
+                disabled={loadingTalkingPoint}
+                title="Generate a new suggestion"
+              >
+                <RefreshCw size={16} className={loadingTalkingPoint ? 'spinning' : ''} />
+              </button>
+            </div>
+            <div className="talking-point-content-inline">
+              {loadingTalkingPoint ? (
+                <p className="loading-text-inline">Generating suggestion...</p>
+              ) : (
+                <p className="talking-point-text-inline">{talkingPoint || 'Click refresh to generate a talking point'}</p>
+              )}
+            </div>
+          </div>
+
           {selectedNode.tags && selectedNode.tags.length > 0 && (
             <div>
               <p style={{ marginBottom: '0.5rem' }}><strong>Focus Areas:</strong></p>

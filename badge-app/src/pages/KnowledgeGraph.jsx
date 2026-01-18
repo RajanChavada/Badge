@@ -90,6 +90,8 @@ export default function KnowledgeGraph() {
   const userProfile = useQuery(api.users.getProfile, user?.id ? { clerkId: user.id } : 'skip')
   const [selectedNode, setSelectedNode] = useState(null)
   const [graphData, setGraphData] = useState({ nodes: [], edges: [] })
+  const [talkingPoint, setTalkingPoint] = useState('')
+  const [loadingTalkingPoint, setLoadingTalkingPoint] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -135,7 +137,36 @@ export default function KnowledgeGraph() {
       nodes,
       edges,
     })
+
+    // Generate initial talking point
+    generateTalkingPoint()
   }, [user, userProfile])
+
+  const generateTalkingPoint = async () => {
+    setLoadingTalkingPoint(true)
+    try {
+      // Sample talking points - can be replaced with API call
+      const talking_points = [
+        'Ask about their recent AI/ML initiatives and how they\'re applying them in production.',
+        'Inquire about co-op or internship opportunities in their engineering teams.',
+        'Discuss their approach to cloud architecture and scalability.',
+        'Ask about the technologies they use for data processing and analytics.',
+        'Inquire about their approach to open-source development and contributions.',
+        'Ask about team collaboration and mentorship opportunities.',
+        'Discuss their process for staying updated with latest technologies.',
+        'Ask about the biggest technical challenges they\'re currently facing.',
+        'Inquire about career growth opportunities and learning paths.',
+        'Ask about their company culture and work environment.',
+      ]
+      const randomPoint = talking_points[Math.floor(Math.random() * talking_points.length)]
+      setTalkingPoint(randomPoint)
+    } catch (error) {
+      console.error('Error generating talking point:', error)
+      setTalkingPoint('Ask about their current projects and team structure.')
+    } finally {
+      setLoadingTalkingPoint(false)
+    }
+  }
 
   const handleNodeClick = (nodeData) => {
     setSelectedNode(nodeData)
@@ -157,7 +188,14 @@ export default function KnowledgeGraph() {
         </div>
       ) : null}
       
-      <KnowledgeGraph3D nodes={graphData.nodes} edges={graphData.edges} onNodeClick={handleNodeClick} />
+      <KnowledgeGraph3D 
+        nodes={graphData.nodes} 
+        edges={graphData.edges} 
+        onNodeClick={handleNodeClick}
+        talkingPoint={talkingPoint}
+        onGenerateTalkingPoint={generateTalkingPoint}
+        loadingTalkingPoint={loadingTalkingPoint}
+      />
 
       <div className="graph-legend">
         <h4>Legend</h4>

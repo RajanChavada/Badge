@@ -12,6 +12,17 @@ export const getProfile = query({
   },
 });
 
+export const getIdentity = query({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+    return existing?.identity ?? null;
+  },
+});
+
 // Rich identity object validator - accepts null from Gemini
 const identityValidator = v.object({
   headline: v.string(),

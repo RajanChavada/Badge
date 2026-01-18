@@ -125,15 +125,3 @@
   color: #764ba2;
 }
 
-@media (max-width: 768px) {
-  .graph-legend,
-  .graph-help {
-    max-width: calc(100vw - 40px);
-    font-size: 0.85em;
-  }
-
-  .graph-legend h4,
-  .graph-help h4 {
-    font-size: 0.95em;
-  }
-}
