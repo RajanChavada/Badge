@@ -8,15 +8,10 @@
  * @module
  */
 
-import type * as booths from "../booths.js";
-import type * as cleanup from "../cleanup.js";
 import type * as geolocation from "../geolocation.js";
 import type * as interactions from "../interactions.js";
 import type * as llm from "../llm.js";
 import type * as myFunctions from "../myFunctions.js";
-import type * as processInteraction from "../processInteraction.js";
-import type * as reccomendations from "../reccomendations.js";
-import type * as resumeParser from "../resumeParser.js";
 import type * as speechToText from "../speechToText.js";
 import type * as users from "../users.js";
 
@@ -27,15 +22,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  booths: typeof booths;
-  cleanup: typeof cleanup;
   geolocation: typeof geolocation;
   interactions: typeof interactions;
   llm: typeof llm;
   myFunctions: typeof myFunctions;
-  processInteraction: typeof processInteraction;
-  reccomendations: typeof reccomendations;
-  resumeParser: typeof resumeParser;
   speechToText: typeof speechToText;
   users: typeof users;
 }>;

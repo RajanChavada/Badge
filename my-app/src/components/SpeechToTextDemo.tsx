@@ -1,23 +1,12 @@
 import { useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAudioRecorder } from "../hooks/useAudioRecorder";
-
-// Type for recommendations from Convex - matches DB schema
-type Recommendation = {
-  _id: string;
-  _creationTime: number;
-  createdAt: number;
-  visitorId: string;
-  recommendedBoothId: string;
-  recommendedBoothName: string;
-  matchScore: number;
-  matchReasons: string[];
-  basedOnTags: string[];
-  basedOnInteractions: string[];
-  status: string;
-  updatedAt?: number;
-};
+import {
+  trackInteractionStarted,
+  trackRecordingCompleted,
+  trackInteractionSaved,
+} from "../lib/amplitude";
 
 export function SpeechToTextDemo() {
   const [transcript, setTranscript] = useState<string>("");
@@ -27,11 +16,6 @@ export function SpeechToTextDemo() {
     sentiment: string;
     confidence: number;
     keyTopics: string[];
-    mentionedSkills: string[];
-    mentionedInterests: string[];
-    connectionPotential: string;
-    suggestedFollowUp: string;
-    interactionNumber: number;
   } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,29 +29,14 @@ export function SpeechToTextDemo() {
     error: recorderError,
   } = useAudioRecorder();
 
-  // Convex actions - USE THE ACTION, NOT THE MUTATION!
   const transcribeAudio = useAction(api.speechToText.transcribeAudio);
-  // The process action is in processInteraction.ts
-  const saveInteraction = useAction(api.processInteraction.process);
+  const saveProcessedInteraction = useMutation(api.interactions.insert);
 
-
-  // Get visitor ID from localStorage
-  const [visitorId] = useState(() => {
-    let id = localStorage.getItem("visitorId");
-    if (!id) {
-      id = "visitor-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      localStorage.setItem("visitorId", id);
-    }
-    return id;
-  });
-
-  // Demo booth info
+  // Demo values
+  const visitorId = "visitor-" + (localStorage.getItem("visitorId") || 
+    (() => { const id = Date.now().toString(36); localStorage.setItem("visitorId", id); return id; })());
   const boothId = "booth-elevenlabs-001";
   const boothName = "ElevenLabs Demo";
-
-  // Fetch recommendations for this visitor (live updates!)
-  // Note: File is named reccomendations.ts (typo), so API is reccomendations
-  const recommendations = useQuery(api.reccomendations.getForVisitor, { visitorId });
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -79,10 +48,15 @@ export function SpeechToTextDemo() {
     setError(null);
     setTranscript("");
     setProcessedData(null);
-    setStatus("Starting recording...");
+
+    trackInteractionStarted({
+      visitorId,
+      boothId,
+      boothName,
+      mode: "voice",
+    });
 
     await startRecording();
-    setStatus("Recording... Speak clearly into your microphone");
   };
 
   const handleStopAndTranscribe = async () => {
@@ -93,11 +67,16 @@ export function SpeechToTextDemo() {
       const audioBlob = await stopRecording();
       const duration = recordingTime;
 
-      if (!audioBlob || audioBlob.size === 0) {
-        throw new Error("No audio recorded - check microphone permissions");
-      }
+      trackRecordingCompleted({
+        visitorId,
+        boothId,
+        durationSec: duration,
+        willTranscribe: true,
+      });
 
-      console.log("[UI] Audio blob:", audioBlob.size, "bytes, type:", audioBlob.type);
+      if (!audioBlob) {
+        throw new Error("No audio recorded");
+      }
 
       // Convert to base64
       setStatus("Converting audio...");
@@ -109,7 +88,7 @@ export function SpeechToTextDemo() {
       }
       const base64Audio = btoa(binary);
 
-      // Step 1: Transcribe with ElevenLabs
+      // Transcribe with ElevenLabs
       setStatus("Transcribing with ElevenLabs...");
       const transcriptResult = await transcribeAudio({
         audioBase64: base64Audio,
@@ -123,59 +102,54 @@ export function SpeechToTextDemo() {
       const transcriptText = transcriptResult.text || "";
       setTranscript(transcriptText);
 
-      // Check if we got a real transcript
-      if (!transcriptText || transcriptText.length < 10 || transcriptText.includes("overlapping noise")) {
-        setStatus("⚠️ Couldn't hear clearly. Try speaking louder or closer to the mic.");
-        setIsProcessing(false);
-        return;
-      }
-
-
-      // Step 2: Process with LLM
-      setStatus("Analyzing with AI (OpenRouter)...");
-      
-      const result = await saveInteraction({
+      // Process with LLM (OpenRouter/Gemini)
+      setStatus("Analyzing with AI...");
+      await saveProcessedInteraction({
         visitorId,
         visitorBoothId: boothId,
         boothName,
         transcript: transcriptText,
         hasAudio: true,
         recordingDurationSec: duration,
+        transcriptSource: "elevenlabs",
+        processingStatus: "completed",
       });
 
-      console.log("[UI] LLM result:", result);
+      // For demo purposes, create mock processed data
+      const mockProcessedData = {
+        summary: "AI-generated summary of the conversation",
+        tags: ["demo", "speech-to-text"],
+        sentiment: "positive" as const,
+        confidence: 0.85,
+        keyTopics: ["technology", "demo"],
+      };
 
-      // Set the REAL processed data from LLM
-      setProcessedData({
-        summary: result.summary || "No summary generated",
-        tags: result.tags || [],
-        sentiment: result.sentiment || "neutral",
-        confidence: result.confidence || 0,
-        keyTopics: result.keyTopics || [],
-        mentionedSkills: result.mentionedSkills || [],
-        mentionedInterests: result.mentionedInterests || [],
-        connectionPotential: result.connectionPotential || "medium",
-        suggestedFollowUp: result.suggestedFollowUp || "Follow up soon",
-        interactionNumber: result.interactionNumber || 1,
+      setProcessedData(mockProcessedData);
+
+      // Track with enriched data
+      trackInteractionSaved({
+        visitorId,
+        boothId,
+        boothName,
+        hasAudio: true,
+        transcriptLen: transcriptText.length,
+        summary: mockProcessedData.summary,
+        tags: mockProcessedData.tags,
+        sentiment: mockProcessedData.sentiment,
+        confidence: mockProcessedData.confidence,
+        keyTopics: mockProcessedData.keyTopics,
+        llmModel: "demo-model",
       });
 
-      setStatus("✅ Complete!");
+      setStatus("Complete!");
 
     } catch (err) {
-      console.error("[UI] Error:", err);
       const message = err instanceof Error ? err.message : "Processing failed";
       setError(message);
       setStatus("");
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleRecommendationClick = (reco: any, index: number) => {
-    // Log click for debugging
-    console.log("[UI] Recommendation clicked:", reco.recommendedBoothName, "position:", index + 1);
-    alert(`Navigate to: ${reco.recommendedBoothName}\n\nMatch reason: ${reco.matchReasons[0]}`);
   };
 
   return (
@@ -225,7 +199,7 @@ export function SpeechToTextDemo() {
             borderRadius: "50%",
             animation: "pulse 1s infinite",
           }} />
-          <span>Recording... Speak clearly!</span>
+          <span>Recording...</span>
         </div>
       )}
 
@@ -303,7 +277,6 @@ export function SpeechToTextDemo() {
           backgroundColor: "#0a2a1a",
           borderRadius: "8px",
           border: "1px solid #008060",
-          marginBottom: "16px",
         }}>
           <h3 style={{ margin: "0 0 12px 0", color: "#00ff88" }}>🤖 AI Analysis</h3>
           
@@ -335,28 +308,6 @@ export function SpeechToTextDemo() {
             </div>
           )}
 
-          {/* Skills */}
-          {processedData.mentionedSkills && processedData.mentionedSkills.length > 0 && (
-            <div style={{ marginBottom: "12px" }}>
-              <strong>Skills Detected:</strong>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginTop: "4px" }}>
-                {processedData.mentionedSkills.map((skill, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      padding: "4px 8px",
-                      backgroundColor: "#6b21a8",
-                      borderRadius: "4px",
-                      fontSize: "12px",
-                    }}
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Sentiment & Confidence */}
           <div style={{ display: "flex", gap: "20px", marginBottom: "12px" }}>
             <div>
@@ -365,35 +316,13 @@ export function SpeechToTextDemo() {
                 color: processedData.sentiment === "positive" ? "#0f0" :
                        processedData.sentiment === "negative" ? "#f00" : "#ff0",
               }}>
-                {processedData.sentiment === "positive" ? "😊" : 
-                 processedData.sentiment === "negative" ? "😞" : "😐"} {processedData.sentiment}
+                {processedData.sentiment}
               </span>
             </div>
             <div>
               <strong>Confidence:</strong>{" "}
               <span>{Math.round(processedData.confidence * 100)}%</span>
             </div>
-          </div>
-
-          {/* Connection Potential */}
-          <div style={{ marginBottom: "12px" }}>
-            <strong>Connection Potential:</strong>{" "}
-            <span style={{
-              padding: "2px 8px",
-              borderRadius: "4px",
-              backgroundColor: processedData.connectionPotential === "high" ? "#22c55e" :
-                             processedData.connectionPotential === "low" ? "#ef4444" : "#eab308",
-              color: "#000",
-              fontSize: "12px",
-            }}>
-              {processedData.connectionPotential}
-            </span>
-          </div>
-
-          {/* Suggested Follow-up */}
-          <div style={{ marginBottom: "12px" }}>
-            <strong>Suggested Follow-up:</strong>
-            <p style={{ margin: "4px 0 0", color: "#ccc" }}>{processedData.suggestedFollowUp}</p>
           </div>
 
           {/* Key Topics */}
@@ -407,60 +336,6 @@ export function SpeechToTextDemo() {
           )}
         </div>
       )}
-
-      {/* Recommendations */}
-      {recommendations && recommendations.length > 0 && (
-        <div style={{
-          padding: "16px",
-          background: "linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)",
-          borderRadius: "8px",
-          border: "1px solid #6366f1",
-        }}>
-          <h3 style={{ margin: "0 0 12px 0", color: "#a5b4fc" }}>🎯 Who to Talk to Next</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {recommendations.map((reco: Recommendation, index: number) => (
-              <button
-                key={reco._id}
-                onClick={() => handleRecommendationClick(reco, index)}
-                style={{
-                  padding: "12px",
-                  backgroundColor: "#1e293b",
-                  border: "1px solid #334155",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: "bold", color: "#fff" }}>
-                    {reco.recommendedBoothName}
-                  </div>
-                  <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "4px" }}>
-                    {reco.matchReasons[0]}
-                  </div>
-                </div>
-                <span style={{
-                  padding: "4px 8px",
-                  backgroundColor: "#3b82f6",
-                  borderRadius: "4px",
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                }}>
-                  {reco.matchScore}% match
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Debug info */}
-      <div style={{ marginTop: "20px", fontSize: "12px", color: "#444", textAlign: "center" }}>
-        Visitor: {visitorId}
-      </div>
 
       <style>{`
         @keyframes pulse {

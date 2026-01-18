@@ -1,15 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-
-import { Send, Mic, MicOff, Volume2, VolumeX, Plus, Sparkles } from 'lucide-react'
-import { useAction } from "convex/react";
-import { useUser } from "@clerk/clerk-react";
-import { api } from "../../convex/_generated/api";
-import { useAppStore } from '../store/useAppStore.js'
-
+import { Send, Mic, MicOff, Volume2, VolumeX, Plus } from 'lucide-react'
+import useAppStore from '../store/useAppStore.js'
 import './ChatInterface.css'
 
 export default function ChatInterface() {
-  const { user } = useUser();
   const { userProfile } = useAppStore()
   const [chatSessions, setChatSessions] = useState([])
   const [selectedSession, setSelectedSession] = useState(null)
@@ -18,9 +12,6 @@ export default function ChatInterface() {
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-
-  const transcribeAudio = useAction(api.speechToText.transcribeAudio);
-  const processInteraction = useAction(api.processInteraction.process);
   const messagesEndRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
@@ -33,7 +24,7 @@ export default function ChatInterface() {
   const startListening = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
 
@@ -42,19 +33,14 @@ export default function ChatInterface() {
       }
 
       mediaRecorder.onstop = async () => {
-        if (audioChunksRef.current.length === 0) {
-          console.error("No audio chunks recorded");
-          return;
-        }
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' })
         // TODO: Send audio to speech-to-text service
         // Convert audio blob to text and add as message
         handleAudioInput(audioBlob)
         stream.getTracks().forEach((track) => track.stop())
       }
 
-      // requesting data every 1 second
-      mediaRecorder.start(1000)
+      mediaRecorder.start()
       setIsListening(true)
     } catch (error) {
       console.error('Microphone access denied:', error)
@@ -69,45 +55,13 @@ export default function ChatInterface() {
   }
 
   const handleAudioInput = async (audioBlob) => {
-    setIsLoading(true);
-    try {
-      // Convert Blob to base64
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-      let binary = "";
-      for (let i = 0; i < uint8Array.length; i++) {
-        binary += String.fromCharCode(uint8Array[i]);
-      }
-      const base64Audio = btoa(binary);
-
-      // Transcribe
-      const result = await transcribeAudio({
-        audioBase64: base64Audio,
-        mimeType: audioBlob.type || "audio/wav",
-      });
-
-      if (result.success && result.text) {
-        const text = result.text.trim();
-        if (text.length === 0) {
-          console.log("Audio processed, but no speech detected.");
-          // Optional: Show a toast? 
-          setInputMessage("No speech detected, try again.");
-          setTimeout(() => setInputMessage(""), 2000); // Clear after 2s
-        } else {
-          setInputMessage(text);
-        }
-      } else {
-        console.error("Transcription failed:", result.error || "No text returned");
-      }
-    } catch (error) {
-      console.error("Error handling audio:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    // TODO: Call speech-to-text AI service
+    // Convert audio to text
+    console.log('Audio input received:', audioBlob)
   }
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !selectedSession || !user) return
+    if (!inputMessage.trim() || !selectedSession) return
 
     const newMessage = {
       id: `msg-${Date.now()}`,
@@ -116,53 +70,27 @@ export default function ChatInterface() {
       timestamp: Date.now(),
     }
 
-    setMessages((prev) => [...prev, newMessage])
+    setMessages([...messages, newMessage])
     setInputMessage('')
     setIsLoading(true)
 
-    try {
-      const result = await processInteraction({
-        userId: user.id || "temp-user",
-        boothId: selectedSession.targetPerson.id || "practice-booth",
-        boothName: selectedSession.targetPerson.name || "AI Recruiter",
-        transcript: inputMessage,
-        hasAudio: false, // Start with false for text, logic can be updated if originated from audio
-        recordingDurationSec: 0,
-      });
-
-      // AI Response based on analysis
+    // TODO: Call AI service to generate contextual response
+    // Use user profile, booth/person info, and conversation history
+    // to generate personalized response
+    setTimeout(() => {
       const aiResponse = {
         id: `msg-${Date.now() + 1}`,
         sender: 'ai',
-        content: (
-          <div className="ai-feedback">
-            <p><strong>Analysis:</strong> {result.summary}</p>
-            <div className="feedback-item">
-              <Sparkles size={14} />
-              <span>Alignment: {result.profileAlignmentScore}%</span>
-            </div>
-            {result.suggestedFollowUp && (
-              <p><strong>Tip:</strong> {result.suggestedFollowUp}</p>
-            )}
-          </div>
-        ),
-        // Store raw text for text-to-speech if needed
-        rawText: result.summary + ". " + result.suggestedFollowUp,
+        content: `Thanks for sharing that! [AI-generated response based on your conversation with ${
+          'targetPerson' in selectedSession.targetPerson
+            ? selectedSession.targetPerson.name
+            : selectedSession.targetPerson.name
+        }]`,
         timestamp: Date.now(),
       }
       setMessages((prev) => [...prev, aiResponse])
-    } catch (err) {
-      console.error("AI processing failed:", err);
-      const errorMsg = {
-        id: `msg-${Date.now() + 1}`,
-        sender: 'ai',
-        content: "Sorry, I couldn't analyze that. Please check your connection.",
-        timestamp: Date.now(),
-      }
-      setMessages((prev) => [...prev, errorMsg])
-    } finally {
       setIsLoading(false)
-    }
+    }, 1000)
   }
 
   const handleTextToSpeech = async () => {
@@ -229,8 +157,9 @@ export default function ChatInterface() {
                 {chatSessions.map((session) => (
                   <button
                     key={session.id}
-                    className={`session-item ${selectedSession?.id === session.id ? 'active' : ''
-                      }`}
+                    className={`session-item ${
+                      selectedSession?.id === session.id ? 'active' : ''
+                    }`}
                     onClick={() => {
                       setSelectedSession(session)
                       setMessages(session.messages)
@@ -313,7 +242,7 @@ export default function ChatInterface() {
                       {message.sender === 'user' ? '👤' : '🤖'}
                     </div>
                     <div className="message-content">
-                      <div className="message-text">{message.content}</div>
+                      <p>{message.content}</p>
                       {message.sender === 'ai' && (
                         <button
                           className="btn-speak"

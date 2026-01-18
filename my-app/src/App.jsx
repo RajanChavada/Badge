@@ -1,19 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Authenticated,
   Unauthenticated,
   useMutation,
   useQuery,
 } from "convex/react";
-import { SignInButton, UserButton } from "@clerk/clerk-react";
+import { SignInButton, UserButton, useUser } from "@clerk/clerk-react";
 import { SpeechToTextDemo } from "./components/SpeechToTextDemo";
 import { ProfileForm } from "./components/ProfileForm";
 import { api } from "../convex/_generated/api";
+import { initAmplitude, setAmplitudeUserId } from "./lib/amplitude";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"speech" | "numbers" | "profile">("speech");
+
+  // Initialize Amplitude on app mount
+  useEffect(() => {
+    initAmplitude();
+  }, []);
 
   return (
     <>
@@ -33,7 +39,7 @@ export default function App() {
           Badge - Event Networking Copilot
         </h1>
 
-        {/* Tab Navigation */}
+        {/* Tab Navigation - Always visible for testing */}
         <div className="flex justify-center gap-4 mb-4">
           <button
             onClick={() => setActiveTab("speech")}
@@ -67,7 +73,7 @@ export default function App() {
           </button>
         </div>
 
-        {/* Tab Content */}
+        {/* Tab Content - Always visible for testing */}
         {activeTab === "speech" && <SpeechToTextDemo />}
         {activeTab === "numbers" && (
           <Authenticated>
@@ -90,12 +96,22 @@ export default function App() {
   );
 }
 
+// (unused SignInForm removed)
+
 function Content() {
   const { viewer, numbers } =
     useQuery(api.myFunctions.listNumbers, {
       count: 10,
     }) ?? {};
   const addNumber = useMutation(api.myFunctions.addNumber);
+  const { user } = useUser();
+
+  // Set Amplitude user ID when authenticated
+  useEffect(() => {
+    if (user?.id) {
+      setAmplitudeUserId(user.id);
+    }
+  }, [user?.id]);
 
   if (viewer === undefined || numbers === undefined) {
     return (
@@ -184,10 +200,6 @@ function ResourceCard({
   title,
   description,
   href,
-}: {
-  title: string;
-  description: string;
-  href: string;
 }) {
   return (
     <div className="flex flex-col gap-2 bg-slate-200 dark:bg-slate-800 p-4 rounded-md h-28 overflow-auto">
