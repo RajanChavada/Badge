@@ -16,6 +16,8 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
   const hoveredNodeRef = useRef(null)
   const sceneInitializedRef = useRef(false)
   const animationFrameIdRef = useRef(null)
+  const labelsContainerRef = useRef(null)
+  const labelsRef = useRef({})
   const [selectedNode, setSelectedNode] = useState(null)
 
   // Memoize the onNodeClick callback
@@ -67,6 +69,20 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
       0.95  // threshold
     )
     composer.addPass(bloomPass)
+
+    // Create labels container
+    if (!labelsContainerRef.current) {
+      labelsContainerRef.current = document.createElement('div')
+      labelsContainerRef.current.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      `
+      containerRef.current.appendChild(labelsContainerRef.current)
+    }
 
     // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
@@ -122,6 +138,27 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
       }
 
       scene.add(mesh)
+
+      // Create label for node
+      const label = document.createElement('div')
+      label.textContent = node.label
+      label.style.cssText = `
+        position: absolute;
+        background-color: rgba(102, 126, 234, 0.9);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        pointer-events: auto;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+        transition: all 0.2s ease;
+      `
+      labelsContainerRef.current.appendChild(label)
+      labelsRef.current[node.id] = { label, mesh }
 
       nodesRef.current[node.id] = {
         mesh,
@@ -219,6 +256,21 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
         node.mesh.rotation.y += 0.002
       })
 
+      // Update label positions to follow nodes
+      Object.entries(labelsRef.current).forEach(([nodeId, { label, mesh }]) => {
+        const vector = mesh.position.clone()
+        vector.project(camera)
+        
+        const x = (vector.x * 0.5 + 0.5) * window.innerWidth
+        const y = -(vector.y * 0.5 - 0.5) * window.innerHeight
+        
+        label.style.left = (x - label.offsetWidth / 2) + 'px'
+        label.style.top = (y - 30) + 'px'
+        
+        // Hide labels that are behind the camera
+        label.style.opacity = vector.z > 1 ? '0' : '1'
+      })
+
       composer.render()
     }
 
@@ -250,6 +302,13 @@ export default function KnowledgeGraph3D({ nodes = [], edges = [], onNodeClick =
       if (containerRef.current && containerRef.current.contains(renderer.domElement)) {
         containerRef.current.removeChild(renderer.domElement)
       }
+      
+      // Clear labels
+      if (labelsContainerRef.current && containerRef.current && containerRef.current.contains(labelsContainerRef.current)) {
+        containerRef.current.removeChild(labelsContainerRef.current)
+        labelsContainerRef.current = null
+      }
+      labelsRef.current = {}
       
       // Reset scene state
       sceneInitializedRef.current = false
