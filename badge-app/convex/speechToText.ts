@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 
+declare const process: any;
+
 // ElevenLabs Scribe response type
 interface ScribeResponse {
   text: string;
@@ -37,7 +39,7 @@ export const transcribeAudio = action({
     words?: Array<{ word: string; start: number; end: number }>;
     error?: string;
   }> => {
-    const elevenlabsKey = process.env.ELEVENLABS_API_KEY;
+    const elevenlabsKey = (process as any).env.ELEVENLABS_API_KEY;
 
     if (!elevenlabsKey) {
       console.error("❌ ELEVENLABS_API_KEY is missing. Please set it in the Convex Dashboard.");

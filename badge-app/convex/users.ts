@@ -1,5 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query, action } from "./_generated/server";
+import { api } from "./_generated/api";
+
+declare const process: any;
 
 export const getProfile = query({
   args: { clerkId: v.string() },
@@ -54,12 +57,12 @@ const identityValidator = v.object({
 });
 
 export const getProfileVectors = action({
-  handler: async (ctx) => {
-    const account = process.env.SNOWFLAKE_ACCOUNT
-    const user = process.env.SNOWFLAKE_USER
-    const bearerToken = process.env.SNOWFLAKE_BEARER_TOKEN
-    const database = process.env.SNOWFLAKE_DATABASE || 'badge_app'
-    const warehouse = process.env.SNOWFLAKE_WAREHOUSE || 'badge_wh'
+  handler: async (_ctx) => {
+    const account = (process as any).env.SNOWFLAKE_ACCOUNT
+    const user = (process as any).env.SNOWFLAKE_USER
+    const bearerToken = (process as any).env.SNOWFLAKE_BEARER_TOKEN
+    const database = (process as any).env.SNOWFLAKE_DATABASE || 'badge_app'
+    const warehouse = (process as any).env.SNOWFLAKE_WAREHOUSE || 'badge_wh'
 
     if (!account || !user || !bearerToken) {
       console.error('[Snowflake] Missing credentials (need Bearer token)')
@@ -111,10 +114,13 @@ export const getProfileVectors = action({
         name: string
         vector: number[]
         coords3d: number[]
+        skills?: string[]
+        interests?: string[]
+        headline?: string
       }> = []
       
       if (result.data && result.data.length > 0) {
-        result.data.forEach((row: any) => {
+        for (const row of result.data) {
           const clerkId = row[0]
           const name = row[1]
           const vectorString = row[2]
@@ -131,14 +137,20 @@ export const getProfileVectors = action({
           const coords3d = vectorArray && vectorArray.length >= 3 
             ? [vectorArray[0], vectorArray[1], vectorArray[2]]
             : [0, 0, 0]
+
+          // Fetch user identity from Convex for additional info
+          const userProfile = await _ctx.runQuery(api.users.getProfile, { clerkId })
           
           profiles.push({
             clerkId,
             name,
             vector: vectorArray,
             coords3d,
+            skills: userProfile?.identity?.skills,
+            interests: userProfile?.identity?.interests,
+            headline: userProfile?.identity?.headline,
           })
-        })
+        }
       }
 
       console.log('[Snowflake] Parsed profiles:', profiles.length)
@@ -316,13 +328,13 @@ export const vectorizeProfileInSnowflake = action({
     interests: v.array(v.string()),
     resumeText: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const account = process.env.SNOWFLAKE_ACCOUNT
-    const user = process.env.SNOWFLAKE_USER
-    const password = process.env.SNOWFLAKE_PASSWORD
-    const bearerToken = process.env.SNOWFLAKE_BEARER_TOKEN
-    const database = process.env.SNOWFLAKE_DATABASE || 'badge_app'
-    const warehouse = process.env.SNOWFLAKE_WAREHOUSE || 'badge_wh'
+  handler: async (_ctx, args) => {
+    const account = (process as any).env.SNOWFLAKE_ACCOUNT
+    const user = (process as any).env.SNOWFLAKE_USER
+    const password = (process as any).env.SNOWFLAKE_PASSWORD
+    const bearerToken = (process as any).env.SNOWFLAKE_BEARER_TOKEN
+    const database = (process as any).env.SNOWFLAKE_DATABASE || 'badge_app'
+    const warehouse = (process as any).env.SNOWFLAKE_WAREHOUSE || 'badge_wh'
 
     console.log('[Snowflake] Starting vectorization...')
     console.log('[Snowflake] Account:', account ? 'SET' : 'MISSING')
@@ -560,9 +572,9 @@ export const generateBoothApproachStrategy = action({
       tags: v.array(v.string()),
     }),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const { userProfile, booth } = args;
-    const geminiKey = process.env.GEMINI_API_KEY;
+    const geminiKey = (process as any).env.GEMINI_API_KEY;
     
     if (!geminiKey) {
       throw new Error('GEMINI_API_KEY not configured');

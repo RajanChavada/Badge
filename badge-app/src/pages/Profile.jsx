@@ -17,6 +17,7 @@ const LOOKING_FOR = ['Internship', 'Full-time', 'Co-op', 'Part-time', 'Mentorshi
 export default function Profile() {
   const { user } = useUser()
   const parseResumeAction = useAction(api.resumeParser.parseResume)
+  const vectorizeAction = useAction(api.users.vectorizeProfileInSnowflake)
   const getProfileQuery = useQuery(api.users.getProfile, user?.id ? { clerkId: user.id } : 'skip')
   const upsertProfileMutation = useMutation(api.users.upsertProfile)
 
@@ -229,6 +230,26 @@ export default function Profile() {
         resumeText: extractedResumeText || undefined,
         identity,
       })
+
+      // Trigger Snowflake vectorization
+      setStatus('Vectorizing profile...')
+      try {
+        const vectorResult = await vectorizeAction({
+          clerkId: user.id,
+          name: formData.name,
+          education: formData.education.map(e => `${e.degree} at ${e.institution}`).join(', ') || '',
+          interests: formData.interests,
+          resumeText: extractedResumeText || undefined,
+        })
+        if (vectorResult.success) {
+          console.log('✅ Profile vectorized in Snowflake')
+        } else {
+          console.warn('⚠️ Vectorization failed:', vectorResult.reason)
+        }
+      } catch (vecErr) {
+        console.error('Vectorization error:', vecErr)
+        // Don't fail the whole save if vectorization fails
+      }
 
       setUserProfile({ ...formData, identity })
       setStatus('Saved!')

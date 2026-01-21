@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { action } from "./_generated/server";
 
+declare const process: any;
+
 export interface EnrichedInteraction {
   summary: string;
   tags: string[];
@@ -29,7 +31,7 @@ export const enrichTranscript = action({
     })),
   },
   handler: async (_, args): Promise<EnrichedInteraction> => {
-    const geminiKey = process.env.GEMINI_API_KEY;
+    const geminiKey = (process as any).env.GEMINI_API_KEY;
 
     if (!geminiKey) {
       console.error("❌ GEMINI_API_KEY is missing. Please set it in the Convex Dashboard.");

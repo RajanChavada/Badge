@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { api } from "./_generated/api";
 
+declare const process: any;
+
 /**
  * Send a message using Gemini for the networking coach chat
  * Includes user profile from Convex for personalized feedback
@@ -22,7 +24,7 @@ export const sendChatMessage = action({
         }),
     },
     handler: async (ctx, args) => {
-        const geminiKey = process.env.GEMINI_API_KEY;
+        const geminiKey = (process as any).env.GEMINI_API_KEY;
 
         if (!geminiKey) {
             console.error("❌ GEMINI_API_KEY is missing");

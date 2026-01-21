@@ -37,7 +37,7 @@ export const markClicked = mutation({
   args: {
     recommendationId: v.id("recommendations"),
   },
-  handler: async (ctx, args) => {
+  handler: async (_ctx, _args) => {
     // Mark recommendation as clicked - no fields to update since updatedAt doesn't exist in schema
     // The click tracking is handled elsewhere, this function exists for API compatibility
     return;

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
 import { useNavigate } from 'react-router-dom';
-import { useAction } from 'convex/react';
+import { useAction, useQuery } from 'convex/react';
 import { useUser } from '@clerk/clerk-react';
 import { api } from '../../convex/_generated/api';
 import useAppStore from '../store/useAppStore.js';
@@ -120,7 +120,7 @@ export default function Vector3D() {
     const fetchAndVisualize = async () => {
       try {
         const result = await getProfileVectors();
-        if (result.success) {
+        if (result?.success && Array.isArray(result.data) && result.data.length > 0) {
           // Apply PCA to convert 768D vectors to 3D
           const pcaVectors = applyPCA(result.data.map(p => p.vector));
 
@@ -132,9 +132,15 @@ export default function Vector3D() {
 
           setProfiles(enrichedData);
           visualize3D(enrichedData);
+        } else {
+          console.warn('Vector3D: No profile vectors available, initializing empty scene.');
+          setProfiles([]);
+          visualize3D([]);
         }
       } catch (error) {
         console.error('Error fetching vectors:', error);
+        // Initialize an empty scene so the UI still renders axes and panels
+        visualize3D([]);
       } finally {
         setLoading(false);
       }
@@ -544,7 +550,12 @@ export default function Vector3D() {
                     <div className="rank-number" style={{ color: profile.color }}>#{idx + 1}</div>
                     <div className="rank-info">
                       <div className="rank-name">{profile.name || 'Unknown'}</div>
-                      <div className="rank-id">{profile.clerkId}</div>
+                      <div className="rank-id">
+                        {profile.identity?.skills?.slice(0, 3).join(', ') || 
+                         profile.identity?.interests?.slice(0, 3).join(', ') ||
+                         profile.identity?.headline ||
+                         'Click to view profile'}
+                      </div>
                     </div>
                     <div className="rank-similarity">
                       <div className="similarity-bar">

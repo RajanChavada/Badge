@@ -22,16 +22,34 @@ function refreshToken() {
     
     console.log('✅ JWT token generated successfully');
     console.log('🔄 Updating Convex environment variable...');
-    
-    // Update Convex environment variable
-    // Note: Use --prod flag if you want to update production environment
-    // Remove --prod to update dev environment
-    execSync(
-      `npx convex env set SNOWFLAKE_BEARER_TOKEN "${jwt}"`,
-      { stdio: 'inherit', cwd: __dirname }
-    );
+
+    // CLI flags:
+    //  --prod  -> update production deployment
+    //  --dev   -> update development deployment
+    //  --both  -> update both prod and dev
+    const args = process.argv.slice(2);
+    const updateProd = args.includes('--prod') || args.includes('--both') || (!args.includes('--dev') && !args.includes('--both'));
+    const updateDev = args.includes('--dev') || args.includes('--both');
+
+    if (updateProd) {
+      console.log('📦 Setting SNOWFLAKE_BEARER_TOKEN in Convex PROD');
+      execSync(
+        `npx convex env set SNOWFLAKE_BEARER_TOKEN "${jwt}" --prod`,
+        { stdio: 'inherit', cwd: __dirname }
+      );
+    }
+
+    if (updateDev) {
+      console.log('🧪 Setting SNOWFLAKE_BEARER_TOKEN in Convex DEV');
+      execSync(
+        `npx convex env set SNOWFLAKE_BEARER_TOKEN "${jwt}"`,
+        { stdio: 'inherit', cwd: __dirname }
+      );
+    }
     
     console.log('✅ JWT token updated in Convex at', new Date().toISOString());
+    console.log('token is :', jwt.slice(0, 20) + '...'); // Log partial token for verification
+    console.log('end of jwt token is: ' + jwt.slice(-20) + '\n');
     console.log('⏰ Next refresh in 50 minutes\n');
   } catch (error) {
     console.error('❌ Error refreshing JWT token:', error.message);
@@ -45,4 +63,4 @@ console.log('⏱️  Token will refresh every 50 minutes\n');
 refreshToken();
 
 // Run every 50 minutes (3000000 milliseconds)
-setInterval(refreshToken, 10 * 60 * 1000);
+setInterval(refreshToken, 50 * 60 * 1000);
